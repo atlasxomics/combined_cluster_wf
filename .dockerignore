@@ -1,0 +1,7 @@
+# latch stuff
+.latch_report.tar.gz
+.logs/
+.latch_history
+.vscode
+**/ArchRLogs
+**/__pycache__

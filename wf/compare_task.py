@@ -2,16 +2,15 @@ import logging
 import subprocess
 
 from latch import large_task
-from latch.types import LatchDir, LatchFile
+from latch.types import LatchDir
 
 from enum import Enum
-from typing import Optional, List
+from typing import List
 from dataclasses import dataclass
 
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(message)s", level=logging.INFO
 )
-
 
 
 @dataclass
@@ -20,21 +19,23 @@ class Groupings:
     conditionA: str
     clusterB: str
     conditionB: str
-    
-    
-@dataclass 
+
+
+@dataclass
 class Genome(Enum):
     mm10 = 'mm10'
-    hg38 = 'hg38' 
+    hg38 = 'hg38'
+
 
 @dataclass
 class CompareOutput:
     visual_output_dir: LatchDir
 
 
-
 def expand_string(input_string):
-    # Split the input string into parts
+    """Split the input string into parts
+    """
+
     split_comma = input_string.split(',')
     final_string = []
     for i in split_comma:
@@ -60,7 +61,8 @@ def expand_string(input_string):
 
     result_string = ','.join(final_string)
     return result_string
-    
+
+
 @large_task
 def compare_task(
     project_name: str,
@@ -68,10 +70,10 @@ def compare_task(
     archrproject: LatchDir,
     genome: Genome,
     output_directory: str
-    ) -> CompareOutput:
-    
-    subprocess.run("mkdir", f"{project_name}_compare_clusters")
-    
+) -> CompareOutput:
+
+    subprocess.run(["mkdir", f"{project_name}_compare_clusters"])
+
     project_dir = f"/root/{output_directory}/{project_name}_compare_clusters"
     local_dir = f"/root/{output_directory}"
     _r_cmd = [
@@ -86,14 +88,13 @@ def compare_task(
         genome,
         project_dir
     ]
-    
+
     subprocess.run(_r_cmd)
-    
+
     subprocess.run(["mkdir", local_dir])
     subprocess.run(["mkdir", project_dir])
     remote_dir = f"latch:///compare_wf/{output_directory}"
-    
-    
+
     return CompareOutput(
         visual_output__dir=LatchDir(local_dir, remote_dir)
     )

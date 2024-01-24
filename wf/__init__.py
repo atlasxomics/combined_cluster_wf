@@ -5,21 +5,19 @@ from wf.compare_task import compare_task, Groupings, Genome, CompareOutput
 
 from typing import List
 
-from latch import workflow, map_task
+from latch import workflow
 from latch.resources.launch_plan import LaunchPlan
 from latch.types import (
     LatchAuthor,
-    LatchFile,
     LatchDir,
     LatchMetadata,
     LatchParameter,
     LatchRule,
 )
 
-    
-    
+
 metadata = LatchMetadata(
-    display_name="compare cluster wf",
+    display_name="compare clusters",
     author=LatchAuthor(
         name="AtlasXomics Inc.",
         email="joshuab@atlasxomics.com",
@@ -35,12 +33,15 @@ metadata = LatchMetadata(
         ),
         "archrproject": LatchParameter(
             display_name="ArchRProject",
-            description="",
+            description="Path to ArchRProject folder create via \
+                        'saveArchRProject' containing a \
+                        Save-ArchR-Project.rds file.",
             batch_table_column=True
         ),
         'groupings': LatchParameter(
             display_name='Specifications of groupings',
-            description='Comparisons between clusters and conditions within subset',
+            description='Comparisons between clusters and conditions within \
+                        subset',
             samplesheet=True
         ),
         'genome': LatchParameter(

@@ -1,0 +1,7 @@
+.ssh_key
+.ssh_key.pub
+.logs/
+.latch_report.tar.gz
+.latch_history
+.vscode
+**/__pycache__
