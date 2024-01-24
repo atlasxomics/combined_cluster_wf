@@ -5,7 +5,7 @@ from wf.compare_task import compare_task, Groupings, Genome, CompareOutput
 
 from typing import List
 
-from latch import workflow
+from latch.resources.workflow import workflow
 from latch.resources.launch_plan import LaunchPlan
 from latch.types import (
     LatchAuthor,
@@ -24,9 +24,10 @@ metadata = LatchMetadata(
         github="https://github.com/atlasxomics",
     ),
     repository="https://github.com/atlasxomics/combined_cluster_wf",
+    license="MIT",
     parameters={
         "project_name": LatchParameter(
-            display_name="run id",
+            display_name="project name",
             description="ATX Run ID with optional prefix, default to \
                         Dxxxxx_NGxxxxx format.",
             batch_table_column=True,
@@ -96,16 +97,16 @@ LaunchPlan(
         "project_name": "default",
         "groupings": [
             Groupings(
-                clusterA="C1",
+                clusterA="C2-4",
                 conditionA="young",
-                clusterB="C2-4",
+                clusterB="C5",
                 conditionB="old"
             )
         ],
         "archrproject": LatchDir(
-            "latch:///compare_wf/D1234/demo_ArchRProject"
+            "latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
         ),
         "genome": Genome.mm10,
-        "output_directory": "demo"
+        "output_directory": "default"
     },
 )

@@ -21,7 +21,6 @@ class Groupings:
     conditionB: str
 
 
-@dataclass
 class Genome(Enum):
     mm10 = 'mm10'
     hg38 = 'hg38'
@@ -104,12 +103,12 @@ if __name__ == "__main__":
     compare_task(
         project_name="D1234_default",
         groupings=[Groupings(
-            clusterA="C1",
+            clusterA="C2-C4",
             conditionA="young",
-            clusterB="C2-C4",
+            clusterB="C5",
             conditionB="old"
         )],
-        archrproject="latch://13502.account/ArchRProjects/D01270/D01270_ArchRProject",
+        archrproject="latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
         genome=Genome.mm10,
         output_directory="dev_test"
     )

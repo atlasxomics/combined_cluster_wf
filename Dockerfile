@@ -45,9 +45,6 @@ RUN R -e "devtools::install_github('immunogenomics/harmony')"
 RUN R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
 RUN R -e "library('ArchR'); ArchR::installExtraPackages()"
 
-# Install Python packages
-RUN python3 -m pip install pandas
-
 # STOP HERE:
 # The following lines are needed to ensure your build environement works
 # correctly with latch.
