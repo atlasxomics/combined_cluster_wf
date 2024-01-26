@@ -40,13 +40,32 @@ RUN apt-get update -y && \
 RUN apt-get install -y r-cran-devtools libcairo2-dev
 
 # Install R packages
-RUN R -e "install.packages(c('Cairo', 'BiocManager', 'Matrix', 'Seurat'))"
+RUN apt-get install -y libmagick++-dev
+RUN apt-get install -y libgdal-dev
+RUN R -e "install.packages(c('Seurat'), dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
+RUN R -e "install.packages(c('Cairo', 'BiocManager', 'Matrix'))"
 RUN R -e "devtools::install_github('immunogenomics/harmony')"
 RUN R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
 RUN R -e "library('ArchR'); ArchR::installExtraPackages()"
-
-# STOP HERE:
-# The following lines are needed to ensure your build environement works
+RUN R -e "install.packages('SeuratObject')"
+RUN R -e "install.packages('knitr')"
+RUN R -e "install.packages('patchwork')"
+RUN R -e "install.packages('gridExtra')"
+RUN R -e "install.packages('dplyr')"
+RUN R -e "install.packages('tibble')"
+RUN R -e "install.packages('hdf5r')"
+RUN R -e "install.packages('stringer')"
+RUN R -e "install.packages('rjson')"
+RUN R -e "install.packages('rmarkdown')"
+RUN R -e "install.packages('purrr')"
+RUN R -e "install.packages('harmony')"
+RUN R -e "install.packages('pheatmap')"
+RUN R -e "install.packages('RColorBrewer')"
+RUN R -e "install.packages('ggrepel')"
+RUN R -e "install.packages('ggpubr')"
+RUN R -e "install.packages('EnhancedVolcano')"
+# STOP H ERE:
+# The fo llowing lines are needed to ensure your build environement works
 # correctly with latch.
 RUN python3 -m pip install --upgrade latch
 COPY wf /root/wf

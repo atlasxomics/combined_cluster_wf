@@ -71,10 +71,14 @@ def compare_task(
     output_directory: str
 ) -> CompareOutput:
 
-    subprocess.run(["mkdir", f"{project_name}_compare_clusters"])
 
     project_dir = f"/root/{output_directory}/{project_name}_compare_clusters"
     local_dir = f"/root/{output_directory}"
+    remote_dir = f"latch:///compare_wf/{output_directory}"
+    
+    subprocess.run(["mkdir", local_dir])
+    subprocess.run(["mkdir", project_dir])
+    
     _r_cmd = [
         "Rscript",
         "wf/compare_clusters.R",
@@ -84,18 +88,14 @@ def compare_task(
         groupings[0].clusterB,
         groupings[0].conditionB,
         archrproject.local_path,
-        genome,
+        genome.value,
         project_dir
     ]
 
     subprocess.run(_r_cmd)
 
-    subprocess.run(["mkdir", local_dir])
-    subprocess.run(["mkdir", project_dir])
-    remote_dir = f"latch:///compare_wf/{output_directory}"
-
     return CompareOutput(
-        visual_output__dir=LatchDir(local_dir, remote_dir)
+        visual_output_dir=LatchDir(local_dir, remote_dir)
     )
 
 
