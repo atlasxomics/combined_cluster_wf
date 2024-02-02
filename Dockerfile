@@ -1,15 +1,19 @@
-FROM 812206152185.dkr.ecr.us-west-2.amazonaws.com/latch-base:fe0b-main
+FROM 812206152185.dkr.ecr.us-west-2.amazonaws.com/latch-base:5303-main
+RUN apt-get update -y
+RUN apt-get install -y gdebi-core 
+RUN apt install -y aptitude
+RUN aptitude install -y libjpeg-dev
+RUN apt-get update -y
 
 # Install R
 RUN apt-get update -y && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository "deb http://cloud.r-project.org/bin/linux/debian buster-cran40/" && \
     apt-get install -y \
         r-base \
         r-base-dev \
         apt-transport-https \
         build-essential \
         gfortran \
+        libhdf5-dev \
         libatlas-base-dev \
         libbz2-dev \        
         libcurl4-openssl-dev \
@@ -29,43 +33,60 @@ RUN apt-get update -y && \
         libxml2-dev \
         libxt-dev \
         libx11-dev \
+        libtiff-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libglpk-dev \
         locales \
         make \
         pandoc \
         tzdata \
+        vim \
+        wget \
         zlib1g-dev \
-        tabix 
+        r-cran-rjava
 
-# Install devtools, cairo like this; see https://stackoverflow.com/questions/20923209
+RUN echo "alias ll='ls -l --color=auto'" >> .bashrc
+
+# Fix systemd conflict with timedatectl
+RUN echo "TZ=$( cat /etc/timezone )" >> /etc/R/Renviron.site
+
+# Have to install devtools, cairo like this; see https://stackoverflow.com/questions/20923209
 RUN apt-get install -y r-cran-devtools libcairo2-dev
 
-# Install R packages
+# Install packages
+RUN R -e "install.packages(c('Cairo', 'Matrix', 'knitr', 'patchwork', 'BiocManager', 'gridExtra', 'dplyr', 'tibble', 'hdf5r', 'stringer', 'rjson', 'rmarkdown', 'purrr', 'harmony', 'pheatmap', 'RColorBrewer', 'ggrepel'))"
+RUN R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
+RUN R -e "devtools::install_github('GreenleafLab/chromVARmotifs')"
+RUN R -e "library('ArchR'); ArchR::installExtraPackages()"
+
+# Upgrade R to version 4.3.0
+RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.0.tar.gz
+RUN tar zxvf R-4.3.0.tar.gz
+RUN cd R-4.3.0 && ./configure --enable-R-shlib
+RUN cd R-4.3.0 && make && make install
+
+
+# Install more R packages
+RUN R -e "install.packages(c('pkgconfig', 'munsell', 'zip', 'zoo', 'xtable', 'listenv', 'lazyeval', 'bit64', 'rJava', 'labeling'), repos = 'http://cran.us.r-project.org')"
+RUN R -e "ArchR::installExtraPackages()"
+RUN R -e "BiocManager::install(version = '3.17',ask = FALSE)"
+RUN R -e "BiocManager::install('EnhancedVolcano')"
+RUN R -e "BiocManager::install('BSgenome.Mmusculus.UCSC.mm10')"
+RUN R -e "BiocManager::install('BSgenome.Hsapiens.UCSC.hg38')"
+
+# numpy needed to be install before macs2 v-2.2.6
+RUN python3 -m pip install numpy
+RUN python3 -m pip install macs2==2.2.6
+
+
+RUN apt-get update -y
 RUN apt-get install -y libmagick++-dev
 RUN apt-get install -y libgdal-dev
 RUN R -e "install.packages(c('Seurat'), dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
-RUN R -e "install.packages(c('Cairo', 'BiocManager', 'Matrix'))"
-RUN R -e "devtools::install_github('immunogenomics/harmony')"
-RUN R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
-RUN R -e "library('ArchR'); ArchR::installExtraPackages()"
-RUN R -e "install.packages('SeuratObject')"
-RUN R -e "install.packages('knitr')"
-RUN R -e "install.packages('patchwork')"
-RUN R -e "install.packages('gridExtra')"
-RUN R -e "install.packages('dplyr')"
-RUN R -e "install.packages('tibble')"
-RUN R -e "install.packages('hdf5r')"
-RUN R -e "install.packages('stringer')"
-RUN R -e "install.packages('rjson')"
-RUN R -e "install.packages('rmarkdown')"
-RUN R -e "install.packages('purrr')"
-RUN R -e "install.packages('harmony')"
-RUN R -e "install.packages('pheatmap')"
-RUN R -e "install.packages('RColorBrewer')"
-RUN R -e "install.packages('ggrepel')"
-RUN R -e "install.packages('ggpubr')"
-RUN R -e "install.packages('EnhancedVolcano')"
-# STOP H ERE:
-# The fo llowing lines are needed to ensure your build environement works
+
+# STOP HERE:
+# The following lines are needed to ensure your build environement works
 # correctly with latch.
 RUN python3 -m pip install --upgrade latch
 COPY wf /root/wf

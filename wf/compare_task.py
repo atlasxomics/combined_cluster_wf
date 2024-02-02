@@ -56,7 +56,7 @@ def expand_string(input_string):
 
             final_string += result_list
         else:
-            return "Invalid input format"
+            return input_string
 
     result_string = ','.join(final_string)
     return result_string
@@ -83,9 +83,9 @@ def compare_task(
         "Rscript",
         "wf/compare_clusters.R",
         project_name,
-        groupings[0].clusterA,
+        expand_string(groupings[0].clusterA),
         groupings[0].conditionA,
-        groupings[0].clusterB,
+        expand_string(groupings[0].clusterB),
         groupings[0].conditionB,
         archrproject.local_path,
         genome.value,
@@ -103,10 +103,10 @@ if __name__ == "__main__":
     compare_task(
         project_name="D1234_default",
         groupings=[Groupings(
-            clusterA="C2-C4",
-            conditionA="young",
-            clusterB="C5",
-            conditionB="old"
+            clusterA="",
+            conditionA="Young",
+            clusterB="C5-C6",
+            conditionB="Old"
         )],
         archrproject="latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
         genome=Genome.mm10,
