@@ -5,3 +5,4 @@
 .latch_history
 .vscode
 **/__pycache__
+.latch/

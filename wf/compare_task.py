@@ -4,9 +4,9 @@ import subprocess
 from latch import large_task
 from latch.types import LatchDir
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import List
-from dataclasses import dataclass
 
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -71,14 +71,13 @@ def compare_task(
     output_directory: str
 ) -> CompareOutput:
 
-
     project_dir = f"/root/{output_directory}/{project_name}_compare_clusters"
     local_dir = f"/root/{output_directory}"
     remote_dir = f"latch:///compare_wf/{output_directory}"
-    
+
     subprocess.run(["mkdir", local_dir])
     subprocess.run(["mkdir", project_dir])
-    
+
     _r_cmd = [
         "Rscript",
         "wf/compare_clusters.R",
@@ -92,7 +91,9 @@ def compare_task(
         project_dir
     ]
 
+    logging.info("Initiating R script.")
     subprocess.run(_r_cmd)
+    logging.info("Rscript complete; uploading results.")
 
     return CompareOutput(
         visual_output_dir=LatchDir(local_dir, remote_dir)
