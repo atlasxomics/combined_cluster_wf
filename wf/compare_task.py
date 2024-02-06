@@ -93,8 +93,8 @@ def compare_task(
     subprocess.run(_r_cmd)
 
     logging.info("Rscript complete; uploading results.")
-    tables = glob.glob(".csv")
-    figures = [file for file in glob.glob("*.pdf") if file != "Rplots.pdf"]
+    tables = glob(".csv")
+    figures = [file for file in glob("*.pdf") if file != "Rplots.pdf"]
 
     _mv_cmd = ["mv"] + tables + figures + out_dir
     subprocess.run(_mv_cmd)
