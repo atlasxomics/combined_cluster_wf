@@ -1,6 +1,6 @@
 import logging
 import subprocess
-
+import re
 from latch import large_task
 from latch.types import LatchDir
 
@@ -34,8 +34,8 @@ class CompareOutput:
 def expand_string(input_string):
     """Split the input string into parts
     """
-
-    split_comma = input_string.split(',')
+    stripped_string = re.sub(r'\s+', '', input_string)
+    split_comma = stripped_string.split(',')
     final_string = []
     for i in split_comma:
         parts = i.split('-')
@@ -56,7 +56,7 @@ def expand_string(input_string):
 
             final_string += result_list
         else:
-            return input_string
+            final_string += [i]
 
     result_string = ','.join(final_string)
     return result_string
