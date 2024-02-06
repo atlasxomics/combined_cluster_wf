@@ -28,7 +28,18 @@ metadata = LatchMetadata(
     parameters={
         "project_name": LatchParameter(
             display_name="project name",
-            description="Name or identifier for project.",
+            description="Name or identifier for project; outputs will be \
+                        saved to /compare_outs/[project_name].",
+            rules=[
+                LatchRule(
+                    regex="^[^/].*",
+                    message="project name cannot start with a '/'"
+                ),
+                LatchRule(
+                    regex="^\S+$",
+                    message="project name cannot contain whitespace"
+                )
+            ],
             batch_table_column=True,
         ),
         "archrproject": LatchParameter(
@@ -48,22 +59,6 @@ metadata = LatchMetadata(
             description='Reference genome',
             batch_table_column=True,
         ),
-        "output_directory": LatchParameter(
-            display_name="output directory",
-            batch_table_column=True,
-            description="Name of Latch directory for output files; files \
-                        will be saved to /compare_outs/{output directory}.",
-            rules=[
-                LatchRule(
-                    regex="^[^/].*",
-                    message="output directory name cannot start with a '/'"
-                ),
-                LatchRule(
-                    regex="^\S+$",
-                    message="directory name cannot contain whitespace"
-                )
-            ]
-        ),
     },
     tags=[],
 )
@@ -75,7 +70,6 @@ def compare_workflow(
     groupings: List[Groupings],
     archrproject: LatchDir,
     genome: Genome,
-    output_directory: str
 ) -> CompareOutput:
 
     return compare_task(
@@ -83,7 +77,6 @@ def compare_workflow(
         groupings=groupings,
         archrproject=archrproject,
         genome=genome,
-        output_directory=output_directory
     )
 
 
@@ -104,6 +97,5 @@ LaunchPlan(
             "latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
         ),
         "genome": Genome.mm10,
-        "output_directory": "default"
     },
 )

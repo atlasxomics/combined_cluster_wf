@@ -6,6 +6,7 @@ from latch.types import LatchDir
 
 from dataclasses import dataclass
 from enum import Enum
+from glob import glob
 from typing import List
 
 logging.basicConfig(
@@ -68,15 +69,12 @@ def compare_task(
     groupings: List[Groupings],
     archrproject: LatchDir,
     genome: Genome,
-    output_directory: str
 ) -> CompareOutput:
 
-    project_dir = f"/root/{output_directory}/{project_name}_compare_clusters"
-    local_dir = f"/root/{output_directory}"
-    remote_dir = f"latch:///compare_wf/{output_directory}"
+    out_dir = f"/root/{project_name}"
+    remote_dir = f"latch:///compare_outs/{project_name}"
 
-    subprocess.run(["mkdir", local_dir])
-    subprocess.run(["mkdir", project_dir])
+    subprocess.run(["mkdir", out_dir])
 
     _r_cmd = [
         "Rscript",
@@ -88,15 +86,21 @@ def compare_task(
         groupings[0].conditionB,
         archrproject.local_path,
         genome.value,
-        project_dir
+        out_dir
     ]
 
     logging.info("Initiating R script.")
     subprocess.run(_r_cmd)
+
     logging.info("Rscript complete; uploading results.")
+    tables = glob.glob(".csv")
+    figures = [file for file in glob.glob("*.pdf") if file != "Rplots.pdf"]
+
+    _mv_cmd = ["mv"] + tables + figures + out_dir
+    subprocess.run(_mv_cmd)
 
     return CompareOutput(
-        visual_output_dir=LatchDir(local_dir, remote_dir)
+        visual_output_dir=LatchDir(out_dir, remote_dir)
     )
 
 
@@ -110,6 +114,5 @@ if __name__ == "__main__":
             conditionB="Old"
         )],
         archrproject="latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
-        genome=Genome.mm10,
-        output_directory="dev_test"
+        genome=Genome.mm10
     )
