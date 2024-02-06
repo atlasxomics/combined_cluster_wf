@@ -1,4 +1,4 @@
-"""Latch workflow for normalizing hot rows and columns in spatial ATAC-seq data
+"""Latch workflow for comparing cluster/condition groupings in an ArchRProject
 """
 
 from wf.compare_task import compare_task, Groupings, Genome, CompareOutput
@@ -28,34 +28,31 @@ metadata = LatchMetadata(
     parameters={
         "project_name": LatchParameter(
             display_name="project name",
-            description="ATX Run ID with optional prefix, default to \
-                        Dxxxxx_NGxxxxx format.",
+            description="Name or identifier for project.",
             batch_table_column=True,
         ),
         "archrproject": LatchParameter(
             display_name="ArchRProject",
-            description="Path to ArchRProject folder create via \
-                        'saveArchRProject' containing a \
+            description="Path to ArchRProject folder containing a \
                         Save-ArchR-Project.rds file.",
             batch_table_column=True
         ),
-        'groupings': LatchParameter(
-            display_name='Specifications of groupings',
-            description='Comparisons between clusters and conditions within \
-                        subset',
+        "groupings": LatchParameter(
+            display_name="Specifications of groupings",
+            description="Cluster and condition specifications for the two \
+                        cell groupings to be compared.",
             samplesheet=True
         ),
         'genome': LatchParameter(
             display_name='genome',
-            description='Reference genome to be used for geneAnnotation and \
-                        genomeAnnotation',
+            description='Reference genome',
             batch_table_column=True,
         ),
         "output_directory": LatchParameter(
             display_name="output directory",
             batch_table_column=True,
-            description="Name of Latch directory for merge fastq files; files \
-                        will be saved to /impute/{output directory}.",
+            description="Name of Latch directory for output files; files \
+                        will be saved to /compare_outs/{output directory}.",
             rules=[
                 LatchRule(
                     regex="^[^/].*",
