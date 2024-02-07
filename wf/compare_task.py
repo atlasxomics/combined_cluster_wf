@@ -6,7 +6,6 @@ from latch.types import LatchDir
 
 from dataclasses import dataclass
 from enum import Enum
-from glob import glob
 from typing import List
 
 logging.basicConfig(
@@ -71,7 +70,7 @@ def compare_task(
     genome: Genome,
 ) -> CompareOutput:
 
-    out_dir = f"/root/{project_name}"
+    out_dir = f"/root/{project_name}/"
     remote_dir = f"latch:///compare_outs/{project_name}"
 
     subprocess.run(["mkdir", out_dir])
@@ -93,11 +92,11 @@ def compare_task(
     subprocess.run(_r_cmd)
 
     logging.info("Rscript complete; uploading results.")
-    tables = glob(".csv")
-    figures = [file for file in glob("*.pdf") if file != "Rplots.pdf"]
 
-    _mv_cmd = ["mv"] + tables + figures + out_dir
-    subprocess.run(_mv_cmd)
+    # Get rid of unnecessary files
+    subprocess.run(
+        ["rm", "-r", f"{out_dir}/Rplots.pdf", f"{out_dir}/ArchRLogs"]
+    )
 
     return CompareOutput(
         visual_output_dir=LatchDir(out_dir, remote_dir)

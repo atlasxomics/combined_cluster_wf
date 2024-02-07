@@ -87,14 +87,14 @@ LaunchPlan(
         "project_name": "default",
         "groupings": [
             Groupings(
-                clusterA="C2-4",
-                conditionA="young",
-                clusterB="C5",
-                conditionB="old"
+                clusterA="C1-C3",
+                conditionA="WT",
+                clusterB="C4,C6,C7",
+                conditionB="Lupus"
             )
         ],
         "archrproject": LatchDir(
-            "latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
+            "s3://latch-public/test-data/13502/compare_ArchRProject",
         ),
         "genome": Genome.mm10,
     },

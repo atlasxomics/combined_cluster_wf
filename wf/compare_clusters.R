@@ -155,9 +155,9 @@ volcano <- EnhancedVolcano(
   ylim = c(0, abs(min(log10(pairwise_df$pvalue)))),
   xlim =  c(-2.5, 2.5),
   title = paste0(
-    colnames(assay(Select_genes))[2],
+    colnames(assay(select_genes))[2],
     " vs ",
-    colnames(assay(Select_genes))[1]
+    colnames(assay(select_genes))[1]
   ),
   pCutoff = 0.05,
   FCcutoff = 0.4,
