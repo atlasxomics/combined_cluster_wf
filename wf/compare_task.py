@@ -95,7 +95,7 @@ def compare_task(
 
     # Get rid of unnecessary files
     subprocess.run(
-        ["rm", "-r", f"{out_dir}/Rplots.pdf", f"{out_dir}/ArchRLogs"]
+        ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"]
     )
 
     return CompareOutput(
