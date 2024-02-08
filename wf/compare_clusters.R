@@ -57,7 +57,7 @@ if (nchar(conditionA) > 1 && length(clusterA_list) > 1) {
   subsetA <- which(proj_filter$Condition == conditionA)
   store_subsets <- append(store_subsets, subsetA)
 } else {
-  all_indexes <- length(project_select$Clusters)
+  all_indexes <- length(proj_filter$Clusters)
   subsetA <- 1:all_indexes
   store_subsets <- append(store_subsets, subsetA)
 }
@@ -75,7 +75,7 @@ if (nchar(conditionB) > 1) {
   subsetB <- which(proj_filter$Condition == conditionB)
   store_subsets <- append(store_subsets, subsetB)
 } else {
-  all_indexes <- length(project_select$Clusters)
+  all_indexes <- length(proj_filter$Clusters)
   subsetB <- 1:all_indexes
   store_subsets <- append(store_subsets, subsetB)
 }
