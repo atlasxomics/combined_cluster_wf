@@ -38,15 +38,12 @@ def expand_string(input_string):
     split_comma = stripped_string.split(',')
     final_string = []
     for i in split_comma:
-        parts = i.split('-')
-
-        if len(parts) == 2:
-            # Extract the start and end values
-            start, end = parts
+        mult_digit = re.findall(r'\d+', i)
+        if len(mult_digit) > 1:
 
             # Extract the letter part and numeric part
-            start_num = int(start[1:])
-            end_num = int(end[1:])
+            start_num = int(mult_digit[0])
+            end_num = int(mult_digit[1])
 
             # Generate the list of values
             result_list = [f"C{num}" for num in range(start_num, end_num + 1)]
@@ -107,9 +104,9 @@ if __name__ == "__main__":
     compare_task(
         project_name="D1234_default",
         groupings=[Groupings(
-            clusterA="",
+            clusterA="C2",
             conditionA="Young",
-            clusterB="C5-C6",
+            clusterB="C1",
             conditionB="Old"
         )],
         archrproject="latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",

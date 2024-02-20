@@ -44,16 +44,16 @@ clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
 store_subsets <- c()
 vector_length <- length(clusterA_list)
 
-if (nchar(conditionA) > 1 && length(clusterA_list) > 1) {
+if (nchar(conditionA) > 0 && length(clusterA_list) > 0) {
   subsetA <- which(
     proj_filter$Condition == conditionA & proj_filter$Clusters %in%
       clusterA_list,
   )
   store_subsets <- append(store_subsets, subsetA)
-} else if (nchar(conditionA) < 1 && length(clusterA_list) > 1) {
+} else if (nchar(conditionA) < 1 && length(clusterA_list) > 0) {
   subsetA <- which(proj_filter$Clusters %in% clusterA_list)
   store_subsets <- append(store_subsets, subsetA)
-} else if (nchar(conditionA) > 1 && length(clusterA_list) < 1) {
+} else if (nchar(conditionA) > 0 && length(clusterA_list) < 1) {
   subsetA <- which(proj_filter$Condition == conditionA)
   store_subsets <- append(store_subsets, subsetA)
 } else {
@@ -61,17 +61,16 @@ if (nchar(conditionA) > 1 && length(clusterA_list) > 1) {
   subsetA <- 1:all_indexes
   store_subsets <- append(store_subsets, subsetA)
 }
-
-if (nchar(conditionB) > 1) {
+if (nchar(conditionB) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
     proj_filter$Condition == conditionB & proj_filter$Clusters %in%
       clusterB_list,
   )
   store_subsets <- append(store_subsets, subsetB)
-} else if (nchar(conditionB) < 1 && length(clusterB_list) > 1) {
+} else if (nchar(conditionB) < 1 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
   store_subsets <- append(store_subsets, subsetB)
-} else if (nchar(conditionB) > 1 && length(clusterB_list) < 1) {
+} else if (nchar(conditionB) > 0 && length(clusterB_list) < 1) {
   subsetB <- which(proj_filter$Condition == conditionB)
   store_subsets <- append(store_subsets, subsetB)
 } else {
