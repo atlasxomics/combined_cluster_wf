@@ -97,6 +97,7 @@ groupcompare <- "UpdateClustName"
 project_select <- addImputeWeights(project_select)
 ###Calculate differential genes
 
+### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "GeneScoreMatrix",
@@ -155,6 +156,8 @@ pdf(paste0(project_name, "_", "volcano_gene.pdf"))
 print(volcano)
 dev.off()
 
+############################# Compare Peaks ##################################
+
 marker_test <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "PeakMatrix",
@@ -186,6 +189,8 @@ total <- merge(peak_data, marker_list, by = c("start", "end"))
 write.csv(
   total, file = paste0(project_name, "_peak_markers.csv"), row.names = FALSE
 )
+
+############################# Compare Motifs #################################
 
 motifs_up <- peakAnnoEnrichment(
   seMarker = marker_test,
