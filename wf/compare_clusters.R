@@ -84,13 +84,23 @@ conditionA <- "ComparisonA"
 conditionB <- "ComparisonB"
 
 tixel_amount <- (1 : nrow(proj_filter@cellColData))
-vector_value <- sapply(tixel_amount, function(x) ifelse(x %in% subsetB, conditionB, ifelse(x %in% subsetA, conditionA, 'NO')))
+vector_value <- sapply(
+  tixel_amount,
+  function(x) {
+    ifelse(
+      x %in% subsetB,
+      conditionB,
+      ifelse(x %in% subsetA, conditionA, "NO")
+    )
+  }
+)
+
 df <- data.frame(proj_filter@cellColData) %>%
   mutate(
     UpdateClustName = vector_value
   )
 
-proj_filter$UpdateClustName <- df$UpdateClustName  
+proj_filter$UpdateClustName <- df$UpdateClustName
 project_select <- proj_filter[store_subsets]
 groupcompare <- "UpdateClustName"
 
