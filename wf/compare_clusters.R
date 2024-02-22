@@ -79,35 +79,22 @@ if (nchar(conditionB) > 0 && length(clusterB_list) > 0) {
   store_subsets <- append(store_subsets, subsetB)
 }
 
-project_select <- proj_filter[store_subsets]
-
-if (length(clusterA_list) < 1) {
-  clusterA_list <- unlist(strsplit(combine_vec, ",", fixed = TRUE))
-}
-if (length(clusterB_list) < 1) {
-  clusterB_list <- unlist(strsplit(combine_vec, ",", fixed = TRUE))
-}
 
 conditionA <- "ComparisonA"
 conditionB <- "ComparisonB"
-df <- data.frame(project_select@cellColData) %>%
+
+tixel_amount <- (1 : nrow(proj_filter@cellColData))
+vector_value <- sapply(tixel_amount, function(x) ifelse(x %in% subsetB, conditionB, ifelse(x %in% subsetA, conditionA, 'NO')))
+df <- data.frame(proj_filter@cellColData) %>%
   mutate(
-    UpdateClustName = ifelse(
-      Clusters %in% clusterB_list,
-      conditionB,
-      ifelse(
-        Clusters %in% clusterA_list,
-        conditionA,
-        Clusters
-      )
-    )
+    UpdateClustName = vector_value
   )
 
-project_select$UpdateClustName <- df$UpdateClustName
-
+proj_filter$UpdateClustName <- df$UpdateClustName  
+project_select <- proj_filter[store_subsets]
 groupcompare <- "UpdateClustName"
 
-
+project_select <- addImputeWeights(project_select)
 ###Calculate differential genes
 
 select_genes <- getMarkerFeatures(
@@ -230,11 +217,11 @@ print(gg_up)
 dev.off()
 
 motifs_do <- peakAnnoEnrichment(
-    seMarker = marker_test,
-    ArchRProj = project_select,
-    peakAnnotation = "Motif",
-    cutOff = "FDR <= 0.1 & Log2FC < 0"
-  )
+  seMarker = marker_test,
+  ArchRProj = project_select,
+  peakAnnotation = "Motif",
+  cutOff = "FDR <= 0.1 & Log2FC < 0"
+)
 df2 <- data.frame(TF = rownames(motifs_do), mlog10Padj = assay(motifs_do)[, 1])
 df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
 df2$rank <- seq_len(nrow(df2))
