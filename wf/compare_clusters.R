@@ -14,10 +14,12 @@ library(stringr)
 library(rjson)
 library(rmarkdown)
 library(purrr)
+library(BSgenome.Mmusculus.UCSC.mm10)
 library(harmony)
 library(pheatmap)
 library(RColorBrewer)
 library(ggrepel)
+library(dplyr)
 library(EnhancedVolcano)
 
 
@@ -49,57 +51,43 @@ if (nchar(conditionA) > 0 && length(clusterA_list) > 0) {
     proj_filter$Condition == conditionA & proj_filter$Clusters %in%
       clusterA_list,
   )
-  store_subsets <- append(store_subsets, subsetA)
 } else if (nchar(conditionA) < 1 && length(clusterA_list) > 0) {
   subsetA <- which(proj_filter$Clusters %in% clusterA_list)
-  store_subsets <- append(store_subsets, subsetA)
 } else if (nchar(conditionA) > 0 && length(clusterA_list) < 1) {
   subsetA <- which(proj_filter$Condition == conditionA)
-  store_subsets <- append(store_subsets, subsetA)
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetA <- 1:all_indexes
-  store_subsets <- append(store_subsets, subsetA)
 }
 if (nchar(conditionB) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
     proj_filter$Condition == conditionB & proj_filter$Clusters %in%
       clusterB_list,
   )
-  store_subsets <- append(store_subsets, subsetB)
 } else if (nchar(conditionB) < 1 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
-  store_subsets <- append(store_subsets, subsetB)
 } else if (nchar(conditionB) > 0 && length(clusterB_list) < 1) {
   subsetB <- which(proj_filter$Condition == conditionB)
-  store_subsets <- append(store_subsets, subsetB)
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetB <- 1:all_indexes
-  store_subsets <- append(store_subsets, subsetB)
 }
 
+combined_subset <- c(subsetA, subsetB)
+unique_subset <- unique(combined_subset)
+store_subsets <- sort(unique_subset)
+subset_archr = proj_filter[c(store_subsets)]
 
-conditionA <- "ComparisonA"
-conditionB <- "ComparisonB"
+project_select <- subset_archr
+groupcompare <- "Condition"
 
-tixel_amount <- (1 : nrow(proj_filter@cellColData))
-vector_value <- sapply(tixel_amount, function(x) ifelse(x %in% subsetB, conditionB, ifelse(x %in% subsetA, conditionA, 'NO')))
-df <- data.frame(proj_filter@cellColData) %>%
-  mutate(
-    UpdateClustName = vector_value
-  )
 
-proj_filter$UpdateClustName <- df$UpdateClustName  
-project_select <- proj_filter[store_subsets]
-groupcompare <- "UpdateClustName"
 
-project_select <- addImputeWeights(project_select)
 ###Calculate differential genes
 
 select_genes <- getMarkerFeatures(
-  ArchRProj = project_select,
-  useMatrix = "GeneScoreMatrix",
+  ArchRProj = project_select, 
+  useMatrix = "GeneScoreMatrix", 
   groupBy = groupcompare,
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon"
@@ -161,8 +149,6 @@ marker_test <- getMarkerFeatures(
   groupBy = groupcompare,
   testMethod = "wilcoxon",
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  useGroups = conditionA,
-  bgdGroups = conditionB,
 )
 
 pma <- plotMarkers(
@@ -175,7 +161,7 @@ pdf(paste0(project_name, "_volcano_peak.pdf"))
 print(pma)
 dev.off()
 
-marker_list <- getMarkers(marker_test, cutOff = "FDR <= 0.01 & Log2FC >= 1")
+marker_list <- getMarkers(marker_test, cutOff = "Pval <= 0.05 & Log2FC >= 0.1")
 
 #Collect data with annotations
 peak_data <- data.frame(
@@ -189,9 +175,9 @@ write.csv(
 
 motifs_up <- peakAnnoEnrichment(
   seMarker = marker_test,
-  ArchRProj = project_select,
-  peakAnnotation = "Motif",
-  cutOff = "FDR <= 0.1 & Log2FC > 0"
+    ArchRProj = project_select,
+    peakAnnotation = "Motif",
+    cutOff = "Pval <= 0.1 & Log2FC > 0"
 )
 df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
 df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
@@ -199,16 +185,16 @@ df$rank <- seq_len(nrow(df))
 
 write.csv(df, file = paste0(project_name, "_motifsup.csv"), row.names = FALSE)
 
-gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
+gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) + 
   geom_point(size = 1) +
   ggrepel::geom_label_repel(
-    data = df[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF),
-    size = 1.5,
-    nudge_x = 2,
-    color = "black"
+        data = df[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF), 
+        size = 1.5,
+        nudge_x = 2,
+        color = "black"
   ) +
-  theme_ArchR() +
-  ylab("-log10(P-adj) Motif Enrichment") +
+  theme_ArchR() + 
+  ylab("-log10(P-adj) Motif Enrichment") + 
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
@@ -220,7 +206,7 @@ motifs_do <- peakAnnoEnrichment(
   seMarker = marker_test,
   ArchRProj = project_select,
   peakAnnotation = "Motif",
-  cutOff = "FDR <= 0.1 & Log2FC < 0"
+    cutOff = "Pval <= 0.1 & Log2FC < 0"
 )
 df2 <- data.frame(TF = rownames(motifs_do), mlog10Padj = assay(motifs_do)[, 1])
 df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
@@ -238,7 +224,7 @@ gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
     nudge_x = 2,
     color = "black"
   ) +
-  theme_ArchR() +
+  theme_ArchR() + 
   ylab("-log10(FDR) Motif Enrichment") +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))

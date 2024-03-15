@@ -104,7 +104,7 @@ if __name__ == "__main__":
     compare_task(
         project_name="D1234_default",
         groupings=[Groupings(
-            clusterA="C2",
+            clusterA="C1",
             conditionA="Young",
             clusterB="C1",
             conditionB="Old"
