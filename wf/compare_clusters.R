@@ -43,43 +43,53 @@ proj_filter <- loadArchRProject(archr_path)
 combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
 clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
 clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
-store_subsets <- c()
-vector_length <- length(clusterA_list)
+conditionA_list <- unlist(strsplit(conditionA, ",", fixed = TRUE))
+conditionB_list <- unlist(strsplit(conditionB, ",", fixed = TRUE))
 
-if (nchar(conditionA) > 0 && length(clusterA_list) > 0) {
+store_subsets <- c()
+if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
   subsetA <- which(
-    proj_filter$Condition == conditionA & proj_filter$Clusters %in%
+    proj_filter$Condition %in% conditionA_list & proj_filter$Clusters %in%
       clusterA_list,
   )
-} else if (nchar(conditionA) < 1 && length(clusterA_list) > 0) {
+} else if (length(conditionA_list) < 1 && length(clusterA_list) > 0) {
   subsetA <- which(proj_filter$Clusters %in% clusterA_list)
-} else if (nchar(conditionA) > 0 && length(clusterA_list) < 1) {
-  subsetA <- which(proj_filter$Condition == conditionA)
+} else if (length(conditionA_list) > 0 && length(clusterA_list) < 1) {
+  subsetA <- which(proj_filter$Condition %in% conditionA_list)
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetA <- 1:all_indexes
 }
-if (nchar(conditionB) > 0 && length(clusterB_list) > 0) {
+
+if (nchar(conditionB_list) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
-    proj_filter$Condition == conditionB & proj_filter$Clusters %in%
+    proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
       clusterB_list,
   )
-} else if (nchar(conditionB) < 1 && length(clusterB_list) > 0) {
+} else if (length(conditionB_list) < 1 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
 } else if (nchar(conditionB) > 0 && length(clusterB_list) < 1) {
-  subsetB <- which(proj_filter$Condition == conditionB)
+  subsetB <- which(proj_filter$Condition %in% conditionB_list)
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetB <- 1:all_indexes
 }
 
+tixel_amount <- (1 : nrow(proj_filter@cellColData))
+vector_value <- sapply(tixel_amount, function(x) ifelse(x %in% subsetA, conditionA, ifelse(x %in% subsetB, conditionB, 'NO')))
+df <- data.frame(proj_filter@cellColData) %>%
+  mutate(
+    UpdateClustName = vector_value
+)
+
+proj_filter$UpdateClustName <- df$UpdateClustName  
+groupcompare <- "UpdateClustName"
+
 combined_subset <- c(subsetA, subsetB)
 unique_subset <- unique(combined_subset)
 store_subsets <- sort(unique_subset)
 subset_archr = proj_filter[c(store_subsets)]
-
 project_select <- subset_archr
-groupcompare <- "Condition"
 
 
 
@@ -157,7 +167,7 @@ pma <- plotMarkers(
   seMarker = marker_test,
   name = conditionA,
   cutOff = "FDR <= 0.1 & abs(Log2FC) >= 1",
-  plotAs = "Volcano"
+  plotAs = "MA"
 )
 pdf(paste0(project_name, "_volcano_peak.pdf"))
 print(pma)
