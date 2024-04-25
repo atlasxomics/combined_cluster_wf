@@ -61,14 +61,14 @@ if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
   subsetA <- 1:all_indexes
 }
 
-if (nchar(conditionB_list) > 0 && length(clusterB_list) > 0) {
+if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
     proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
       clusterB_list,
   )
 } else if (length(conditionB_list) < 1 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
-} else if (nchar(conditionB) > 0 && length(clusterB_list) < 1) {
+} else if (length(conditionB) > 0 && length(clusterB_list) < 1) {
   subsetB <- which(proj_filter$Condition %in% conditionB_list)
 } else {
   all_indexes <- length(proj_filter$Clusters)
