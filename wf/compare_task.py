@@ -31,10 +31,13 @@ class CompareOutput:
     visual_output_dir: LatchDir
 
 
+def strip_string(input):
+    return re.sub(r'\s+', '', input)
+
 def expand_string(input_string):
     """Split the input string into parts
     """
-    stripped_string = re.sub(r'\s+', '', input_string)
+    stripped_string = strip_string(input_string)
     split_comma = stripped_string.split(',')
     final_string = []
     for i in split_comma:
@@ -77,9 +80,9 @@ def compare_task(
         "wf/compare_clusters.R",
         project_name,
         expand_string(groupings[0].clusterA),
-        groupings[0].conditionA,
+        strip_string(groupings[0].conditionA),
         expand_string(groupings[0].clusterB),
-        groupings[0].conditionB,
+        strip_string(groupings[0].conditionB),
         archrproject.local_path,
         genome.value,
         out_dir
