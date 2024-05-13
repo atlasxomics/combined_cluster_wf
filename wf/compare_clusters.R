@@ -22,16 +22,32 @@ library(ggrepel)
 library(dplyr)
 library(EnhancedVolcano)
 
+multiple_conditions <- function(archrConditions, user) { # create a function with the name my_function
+  match_cond <- c()
+  user_lowercase <- tolower(user)
+  pattern <- paste0("\\b", user_lowercase, "\\b")
+  for (sample in archrConditions) {
+    lowercase <- tolower(sample)
+    result <- grepl(pattern, lowercase)
+    if (result) {
+      match_cond <- append(match_cond, sample)
+    }
+  }
+  final <- paste(match_cond, collapse = ",")
+  return(final)
+}
 
 args <- commandArgs(trailingOnly = TRUE)
 project_name <- args[1]
 clusterA <- args[2]
 conditionA <- args[3]
-clusterB <- args[4]
-conditionB <- args[5]
-archr_path <- args[6]
-genome <- args[7]
-work_dir <- args[8]
+multipleA_flag <- args[4]
+clusterB <- args[5]
+conditionB <- args[6]
+multipleB_flag <- args[7]
+archr_path <- args[8]
+genome <- args[9]
+work_dir <- args[10]
 
 # set genome to be used for gene and genome annotations to be mouse mm10 or
 #  human hg38
@@ -39,7 +55,13 @@ addArchRGenome(genome)
 
 setwd(work_dir)
 proj_filter <- loadArchRProject(archr_path)
-
+condition_values <- proj_filter@cellColData$Condition@values
+if (multipleA_flag == "t") {
+    conditionA <- multiple_conditions(condition_values, conditionA)
+}
+if (multipleB_flag == "t") {
+    conditionB <- multiple_conditions(condition_values, conditionB)
+}
 combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
 clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
 clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))

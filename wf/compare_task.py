@@ -17,8 +17,10 @@ logging.basicConfig(
 class Groupings:
     clusterA: str
     conditionA: str
+    multipleA: bool
     clusterB: str
     conditionB: str
+    multipleB: bool
 
 
 class Genome(Enum):
@@ -61,6 +63,11 @@ def expand_string(input_string):
     result_string = ','.join(final_string)
     return result_string
 
+def resolve_bool(value: bool):
+    if value:
+        return 't'
+    else:
+        return 'f'
 
 @large_task
 def compare_task(
@@ -81,8 +88,10 @@ def compare_task(
         project_name,
         expand_string(groupings[0].clusterA),
         strip_string(groupings[0].conditionA),
+        resolve_bool(groupings[0].multipleA),
         expand_string(groupings[0].clusterB),
         strip_string(groupings[0].conditionB),
+        resolve_bool(groupings[0].multipleB),
         archrproject.local_path,
         genome.value,
         out_dir
@@ -107,11 +116,13 @@ if __name__ == "__main__":
     compare_task(
         project_name="D1234_default",
         groupings=[Groupings(
-            clusterA="C1",
-            conditionA="Young",
+            clusterA="C4, C8, C3",
+            conditionA="Tumor",
+            multipleA=True,
             clusterB="C1",
-            conditionB="Old"
+            conditionB="Pdx",
+            multipleB=True
         )],
-        archrproject="latch://13502.account/ArchRProjects/Babayev_2/Babayev_2_ArchRProject",
+        archrproject="latch://13502.account/ArchRProjects/Gaykalova/Gaykalova_ArchRProject",
         genome=Genome.mm10
     )

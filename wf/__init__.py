@@ -89,8 +89,10 @@ LaunchPlan(
             Groupings(
                 clusterA="C1-C3",
                 conditionA="WT",
+                multipleA=False,
                 clusterB="C4,C6,C7",
-                conditionB="Lupus"
+                conditionB="Lupus",
+                multipleB=False
             )
         ],
         "archrproject": LatchDir(
