@@ -86,7 +86,7 @@ def compare_workflow(
     * for [peaks](https://www.archrproject.com/bookdown/pairwise-testing-between-groups.html)
         * volcano plot
         * peak_markers.csv
-    * for motifs (https://www.archrproject.com/bookdown/motif-enrichment-in-differential-peaks.html​
+    * for [motifs](https://www.archrproject.com/bookdown/motif-enrichment-in-differential-peaks.html​)
         * enrichment plot
         * motif_enrichment.csv
 
