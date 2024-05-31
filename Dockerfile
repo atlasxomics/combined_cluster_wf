@@ -52,7 +52,8 @@ RUN echo "alias ll='ls -l --color=auto'" >> .bashrc
 RUN echo "TZ=$( cat /etc/timezone )" >> /etc/R/Renviron.site
 
 # Have to install devtools ciaro (https://stackoverflow.com/questions/20923209)
-RUN apt-get install -y r-cran-devtools libcairo2-dev libmagick++-dev libgdal-dev
+RUN apt-get update -y && \
+    apt-get install -y r-cran-devtools libcairo2-dev libmagick++-dev libgdal-dev
 
 # Upgrade R to version 4.3.0
 RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.0.tar.gz
