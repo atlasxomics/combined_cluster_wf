@@ -51,39 +51,25 @@ RUN echo "alias ll='ls -l --color=auto'" >> .bashrc
 # Fix systemd conflict with timedatectl
 RUN echo "TZ=$( cat /etc/timezone )" >> /etc/R/Renviron.site
 
-# Have to install devtools, cairo like this; see https://stackoverflow.com/questions/20923209
-RUN apt-get install -y r-cran-devtools libcairo2-dev
-
-# Install packages
-RUN R -e "install.packages(c('Cairo', 'Matrix', 'knitr', 'patchwork', 'BiocManager', 'gridExtra', 'dplyr', 'tibble', 'hdf5r', 'stringer', 'rjson', 'rmarkdown', 'purrr', 'harmony', 'pheatmap', 'RColorBrewer', 'ggrepel'))"
-RUN R -e "devtools::install_github('GreenleafLab/ArchR', ref='master', repos = BiocManager::repositories())"
-RUN R -e "devtools::install_github('GreenleafLab/chromVARmotifs')"
-RUN R -e "library('ArchR'); ArchR::installExtraPackages()"
+# Have to install devtools ciaro (https://stackoverflow.com/questions/20923209)
+RUN apt-get install -y r-cran-devtools libcairo2-dev libmagick++-dev libgdal-dev
 
 # Upgrade R to version 4.3.0
 RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.0.tar.gz
-RUN tar zxvf R-4.3.0.tar.gz
+RUN tar zxvf R-4.3.0.tar.gz && rm R-4.3.0.tar.gz 
 RUN cd R-4.3.0 && ./configure --enable-R-shlib
 RUN cd R-4.3.0 && make && make install
 
-
-# Install more R packages
-RUN R -e "install.packages(c('pkgconfig', 'munsell', 'zip', 'zoo', 'xtable', 'listenv', 'lazyeval', 'bit64', 'rJava', 'labeling'), repos = 'http://cran.us.r-project.org')"
-RUN R -e "ArchR::installExtraPackages()"
-RUN R -e "BiocManager::install(version = '3.17',ask = FALSE)"
-RUN R -e "BiocManager::install('EnhancedVolcano')"
-RUN R -e "BiocManager::install('BSgenome.Mmusculus.UCSC.mm10')"
-RUN R -e "BiocManager::install('BSgenome.Hsapiens.UCSC.hg38')"
+# Installation of R packages with renv
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/renv_1.0.7.tar.gz', repos = NULL, type = 'source')"
+COPY renv.lock /root/renv.lock
+RUN mkdir /root/renv
+COPY renv/activate.R /root/renv/activate.R
+RUN R -e "renv::restore()"
 
 # numpy needed to be install before macs2 v-2.2.6
 RUN python3 -m pip install numpy
 RUN python3 -m pip install macs2==2.2.6
-
-
-RUN apt-get update -y
-RUN apt-get install -y libmagick++-dev
-RUN apt-get install -y libgdal-dev
-RUN R -e "install.packages(c('Seurat'), dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
 
 # STOP HERE:
 # The following lines are needed to ensure your build environement works

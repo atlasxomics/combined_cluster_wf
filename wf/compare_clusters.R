@@ -1,5 +1,5 @@
-library(BiocManager)
 library(ArchR)
+library(BiocManager)
 library(Matrix)
 library(Seurat)
 library(SeuratObject)
@@ -14,6 +14,7 @@ library(stringr)
 library(rjson)
 library(rmarkdown)
 library(purrr)
+library(BSgenome.Hsapiens.UCSC.hg38)
 library(BSgenome.Mmusculus.UCSC.mm10)
 library(harmony)
 library(pheatmap)
@@ -22,7 +23,8 @@ library(ggrepel)
 library(dplyr)
 library(EnhancedVolcano)
 
-multiple_conditions <- function(archrConditions, user) { # create a function with the name my_function
+multiple_conditions <- function(archrConditions, user) {
+  # create a function with the name my_function
   match_cond <- c()
   user_lowercase <- tolower(user)
   pattern <- paste0("\\b", user_lowercase, "\\b")
@@ -98,28 +100,31 @@ if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
 }
 
 tixel_amount <- (1 : nrow(proj_filter@cellColData))
-vector_value <- sapply(tixel_amount, function(x) ifelse(x %in% subsetA, conditionA, ifelse(x %in% subsetB, conditionB, 'NO')))
-df <- data.frame(proj_filter@cellColData) %>%
-  mutate(
-    UpdateClustName = vector_value
+vector_value <- sapply(
+  tixel_amount,
+  function(x) ifelse(
+    x %in% subsetA,
+    conditionA,
+    ifelse(x %in% subsetB, conditionB, "NO")
+  )
 )
+df <- data.frame(proj_filter@cellColData) %>%
+  mutate(UpdateClustName = vector_value)
 
-proj_filter$UpdateClustName <- df$UpdateClustName  
+proj_filter$UpdateClustName <- df$UpdateClustName
 groupcompare <- "UpdateClustName"
 
 combined_subset <- c(subsetA, subsetB)
 unique_subset <- unique(combined_subset)
 store_subsets <- sort(unique_subset)
-subset_archr = proj_filter[c(store_subsets)]
+subset_archr <- proj_filter[c(store_subsets)]
 project_select <- subset_archr
-
-
 
 ###Calculate differential genes
 
 select_genes <- getMarkerFeatures(
-  ArchRProj = project_select, 
-  useMatrix = "GeneScoreMatrix", 
+  ArchRProj = project_select,
+  useMatrix = "GeneScoreMatrix",
   groupBy = groupcompare,
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon"
@@ -211,9 +216,9 @@ write.csv(
 
 motifs_up <- peakAnnoEnrichment(
   seMarker = marker_test,
-    ArchRProj = project_select,
-    peakAnnotation = "Motif",
-    cutOff = "Pval <= 0.1 & Log2FC > 0"
+  ArchRProj = project_select,
+  peakAnnotation = "Motif",
+  cutOff = "Pval <= 0.1 & Log2FC > 0"
 )
 df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
 df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
@@ -221,16 +226,17 @@ df$rank <- seq_len(nrow(df))
 
 write.csv(df, file = paste0(project_name, "_motifsup.csv"), row.names = FALSE)
 
-gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) + 
+gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   geom_point(size = 1) +
   ggrepel::geom_label_repel(
-        data = df[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF), 
+        data = df[rev(seq_len(30)), ],
+        aes(x = rank, y = mlog10Padj, label = TF),
         size = 1.5,
         nudge_x = 2,
         color = "black"
   ) +
-  theme_ArchR() + 
-  ylab("-log10(P-adj) Motif Enrichment") + 
+  theme_ArchR() +
+  ylab("-log10(P-adj) Motif Enrichment") +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
@@ -242,7 +248,7 @@ motifs_do <- peakAnnoEnrichment(
   seMarker = marker_test,
   ArchRProj = project_select,
   peakAnnotation = "Motif",
-    cutOff = "Pval <= 0.1 & Log2FC < 0"
+  cutOff = "Pval <= 0.1 & Log2FC < 0"
 )
 df2 <- data.frame(TF = rownames(motifs_do), mlog10Padj = assay(motifs_do)[, 1])
 df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
@@ -260,7 +266,7 @@ gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
     nudge_x = 2,
     color = "black"
   ) +
-  theme_ArchR() + 
+  theme_ArchR() +
   ylab("-log10(FDR) Motif Enrichment") +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
