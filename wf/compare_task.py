@@ -103,7 +103,6 @@ def compare_task(
     subprocess.run(_r_cmd)
 
     logging.info("Rscript complete; uploading results.")
-    import time; time.sleep(3600)
 
     # Get rid of unnecessary files
     subprocess.run(

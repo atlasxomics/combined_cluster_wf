@@ -1,27 +1,26 @@
 library(ArchR)
 library(BiocManager)
-library(Matrix)
-library(Seurat)
-library(SeuratObject)
-library(grid)
-library(knitr)
-library(patchwork)
-library(gridExtra)
-library(dplyr)
-library(tibble)
-library(hdf5r)
-library(stringr)
-library(rjson)
-library(rmarkdown)
-library(purrr)
 library(BSgenome.Hsapiens.UCSC.hg38)
 library(BSgenome.Mmusculus.UCSC.mm10)
-library(harmony)
-library(pheatmap)
-library(RColorBrewer)
-library(ggrepel)
 library(dplyr)
 library(EnhancedVolcano)
+library(ggrepel)
+library(grid)
+library(gridExtra)
+library(harmony)
+library(hdf5r)
+library(knitr)
+library(Matrix)
+library(patchwork)
+library(pheatmap)
+library(purrr)
+library(RColorBrewer)
+library(rjson)
+library(rmarkdown)
+library(Seurat)
+library(SeuratObject)
+library(stringr)
+library(tibble)
 
 multiple_conditions <- function(archrConditions, user) {
   # create a function with the name my_function
@@ -51,8 +50,6 @@ archr_path <- args[8]
 genome <- args[9]
 work_dir <- args[10]
 
-# set genome to be used for gene and genome annotations to be mouse mm10 or
-#  human hg38
 addArchRGenome(genome)
 
 setwd(work_dir)
