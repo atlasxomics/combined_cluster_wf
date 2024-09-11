@@ -319,6 +319,21 @@ volcanom <- EnhancedVolcano(
   labSize = 4.0
 )
 
+file_names <- getGroupBW(
+  ArchRProj = project_select,
+  groupBy = groupcompare,
+  normMethod = "ReadsInTSS",
+  tileSize = 100,
+  maxCells = 1000,
+  ceiling = 4,
+  verbose = TRUE,
+  threads = getArchRThreads(),
+)
+
+for (file_name in file_names) {
+  file.copy(from = file_name, to = work_dir)  
+}
+
 pdf(paste0(project_name, "_", "volcano_motif.pdf"))
 print(volcanom)
 dev.off()
