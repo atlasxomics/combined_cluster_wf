@@ -36,6 +36,7 @@ class CompareOutput:
 def strip_string(input):
     return re.sub(r'\s+', '', input)
 
+
 def expand_string(input_string):
     """Split the input string into parts
     """
@@ -63,11 +64,13 @@ def expand_string(input_string):
     result_string = ','.join(final_string)
     return result_string
 
+
 def resolve_bool(value: bool):
     if value:
         return 't'
     else:
         return 'f'
+
 
 @large_task
 def compare_task(
@@ -81,7 +84,6 @@ def compare_task(
     remote_dir = f"latch:///compare_outs/{project_name}"
 
     subprocess.run(["mkdir", out_dir])
-
     _r_cmd = [
         "Rscript",
         "wf/compare_clusters.R",
