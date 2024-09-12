@@ -70,7 +70,7 @@ RUN R -e "renv::restore()"
 
 # numpy needed to be install before macs2 v-2.2.6
 RUN python3 -m pip install numpy
-RUN python3 -m pip install macs2==2.2.6
+# RUN python3 -m pip install macs2==2.2.6
 
 # STOP HERE:
 # The following lines are needed to ensure your build environement works
