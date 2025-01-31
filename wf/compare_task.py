@@ -100,7 +100,7 @@ def compare_task(
     ]
 
     logging.info("Initiating R script.")
-    subprocess.run(_r_cmd)
+    subprocess.run(_r_cmd, check=True)
 
     logging.info("Rscript complete; uploading results.")
 

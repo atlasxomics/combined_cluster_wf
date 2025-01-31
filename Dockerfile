@@ -62,7 +62,7 @@ RUN cd R-4.3.0 && ./configure --enable-R-shlib
 RUN cd R-4.3.0 && make && make install
 
 # Installation of R packages with renv
-RUN R -e "install.packages('https://cran.r-project.org/src/contrib/renv_1.0.7.tar.gz', repos = NULL, type = 'source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/renv/renv_1.0.7.tar.gz', repos = NULL, type = 'source')"
 COPY renv.lock /root/renv.lock
 RUN mkdir /root/renv
 COPY renv/activate.R /root/renv/activate.R
