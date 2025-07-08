@@ -1,9 +1,7 @@
 """Latch workflow for comparing cluster/condition groupings in an ArchRProject
 """
 
-from wf.compare_task import compare_task, Groupings, Genome, CompareOutput
-
-from typing import List
+from wf.compare_task import compare_task, Groupings, Genome
 
 from latch.resources.workflow import workflow
 from latch.resources.launch_plan import LaunchPlan
@@ -20,7 +18,7 @@ metadata = LatchMetadata(
     display_name="compare clusters",
     author=LatchAuthor(
         name="AtlasXomics Inc.",
-        email="joshuab@atlasxomics.com",
+        email="jamesm@atlasxomics.com",
         github="https://github.com/atlasxomics",
     ),
     repository="https://github.com/atlasxomics/combined_cluster_wf",
@@ -52,7 +50,7 @@ metadata = LatchMetadata(
             display_name="Specifications of groupings",
             description="Cluster and condition specifications for the two \
                         cell groupings to be compared.",
-            samplesheet=True
+            batch_table_column=True
         ),
         'genome': LatchParameter(
             display_name='genome',
@@ -67,10 +65,10 @@ metadata = LatchMetadata(
 @workflow(metadata)
 def compare_workflow(
     project_name: str,
-    groupings: List[Groupings],
+    groupings: Groupings,
     archrproject: LatchDir,
     genome: Genome,
-) -> CompareOutput:
+) -> LatchDir:
 
     '''Explore differences in genes, peaks, and motifs within an ArchRProject.
 
@@ -157,16 +155,14 @@ LaunchPlan(
     "default",
     {
         "project_name": "default",
-        "groupings": [
-            Groupings(
-                clusterA="C1-C3",
-                conditionA="WT",
-                multipleA=False,
-                clusterB="C4,C6,C7",
-                conditionB="Lupus",
-                multipleB=False
-            )
-        ],
+        "groupings": Groupings(
+            clusterA="C1-C3",
+            conditionA="WT",
+            multipleA=False,
+            clusterB="C4,C6,C7",
+            conditionB="Lupus",
+            multipleB=False
+        ),
         "archrproject": LatchDir(
             "s3://latch-public/test-data/13502/compare_ArchRProject",
         ),

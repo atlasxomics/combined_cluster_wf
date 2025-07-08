@@ -7,23 +7,20 @@ library(EnhancedVolcano)
 library(ggrepel)
 library(grid)
 library(gridExtra)
-library(harmony)
 library(hdf5r)
-library(knitr)
 library(Matrix)
 library(patchwork)
 library(pheatmap)
 library(purrr)
 library(RColorBrewer)
-library(rjson)
-library(rmarkdown)
 library(Seurat)
 library(SeuratObject)
 library(stringr)
 library(tibble)
 
 multiple_conditions <- function(archrConditions, user) {
-  # create a function with the name my_function
+  # From a list of conditions, returns all containing string 'user'.
+
   match_cond <- c()
   user_lowercase <- tolower(user)
   pattern <- paste0("\\b", user_lowercase, "\\b")
@@ -53,44 +50,55 @@ work_dir <- args[10]
 addArchRGenome(genome)
 
 setwd(work_dir)
+
 proj_filter <- loadArchRProject(archr_path)
+
 condition_values <- proj_filter@cellColData$Condition@values
-if (multipleA_flag == "t") {
+if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
     conditionA <- multiple_conditions(condition_values, conditionA)
 }
-if (multipleB_flag == "t") {
+if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
     conditionB <- multiple_conditions(condition_values, conditionB)
 }
+
 combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
+
 clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
 clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
+
 conditionA_list <- unlist(strsplit(conditionA, ",", fixed = TRUE))
 conditionB_list <- unlist(strsplit(conditionB, ",", fixed = TRUE))
 
-store_subsets <- c()
+# Create boolean index for Group A
 if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
   subsetA <- which(
     proj_filter$Condition %in% conditionA_list & proj_filter$Clusters %in%
       clusterA_list,
   )
-} else if (length(conditionA_list) < 1 && length(clusterA_list) > 0) {
+
+} else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
   subsetA <- which(proj_filter$Clusters %in% clusterA_list)
-} else if (length(conditionA_list) > 0 && length(clusterA_list) < 1) {
+
+} else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
   subsetA <- which(proj_filter$Condition %in% conditionA_list)
+
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetA <- 1:all_indexes
 }
 
+# Create boolean index for Group B
 if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
     proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
       clusterB_list,
   )
-} else if (length(conditionB_list) < 1 && length(clusterB_list) > 0) {
+} else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
-} else if (length(conditionB) > 0 && length(clusterB_list) < 1) {
+
+} else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
   subsetB <- which(proj_filter$Condition %in% conditionB_list)
+
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetB <- 1:all_indexes
@@ -114,11 +122,9 @@ groupcompare <- "UpdateClustName"
 combined_subset <- c(subsetA, subsetB)
 unique_subset <- unique(combined_subset)
 store_subsets <- sort(unique_subset)
-subset_archr <- proj_filter[c(store_subsets)]
-project_select <- subset_archr
+project_select <- proj_filter[c(store_subsets)]
 
-###Calculate differential genes
-
+### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "GeneScoreMatrix",
