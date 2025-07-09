@@ -104,36 +104,34 @@ if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
   subsetB <- 1:all_indexes
 }
 
-tixel_amount <- (1 : nrow(proj_filter@cellColData))
+# Label Cells in subsets with condition/group label
 vector_value <- sapply(
-  tixel_amount,
+  (1 : nrow(proj_filter@cellColData)),
   function(x) ifelse(
     x %in% subsetA,
     conditionA,
     ifelse(x %in% subsetB, conditionB, "NO")
   )
 )
-df <- data.frame(proj_filter@cellColData) %>%
-  mutate(UpdateClustName = vector_value)
+proj_filter$UpdateClustName <- vector_value
 
-proj_filter$UpdateClustName <- df$UpdateClustName
-groupcompare <- "UpdateClustName"
-
-combined_subset <- c(subsetA, subsetB)
-unique_subset <- unique(combined_subset)
-store_subsets <- sort(unique_subset)
-project_select <- proj_filter[c(store_subsets)]
+# Filter project to only Cells in groups subsets 
+store_subsets <- sort(unique(c(subsetA, subsetB)))
+project_select <- proj_filter[store_subsets]
 
 ### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
+  groupBy = "UpdateClustName",
+  useGroups = conditionA,
+  bgdGroups = conditionB,
   useMatrix = "GeneScoreMatrix",
-  groupBy = groupcompare,
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon"
+  testMethod = "ttest"
 )
 
-sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 0.02")
+# Save stats for all genes
+sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 write.csv(
   sample_gene_list,
   file = paste0(project_name, "_sample_gene_list.csv"),
@@ -146,6 +144,7 @@ FDR <- assay(select_genes, "FDR")[, 1]
 pvalue <- assay(select_genes, "Pval")[, 1]
 pairwise_df <- data.frame(pairwise_genes, log2FC, pvalue, FDR)
 pairwise_df <- na.omit(pairwise_df)
+
 pairwise_df$Significance <- ifelse(
   pairwise_df$pvalue < 0.05 & abs(pairwise_df$log2FC) >= 0.4,
   ifelse(
@@ -187,25 +186,27 @@ dev.off()
 
 marker_test <- getMarkerFeatures(
   ArchRProj = project_select,
+  groupBy = "UpdateClustName",
+  useGroups = conditionA,
+  bgdGroups = conditionB,
   useMatrix = "PeakMatrix",
-  groupBy = groupcompare,
-  testMethod = "wilcoxon",
   bias = c("TSSEnrichment", "log10(nFrags)"),
+  testMethod = "wilcoxon"
 )
 
 pma <- plotMarkers(
   seMarker = marker_test,
   name = conditionA,
-  cutOff = "FDR <= 0.1 & abs(Log2FC) >= 1",
+  cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
   plotAs = "MA"
 )
-pdf(paste0(project_name, "_volcano_peak.pdf"))
+pdf(paste0(project_name, "_MA_peak.pdf"))
 print(pma)
 dev.off()
 
-marker_list <- getMarkers(marker_test, cutOff = "Pval <= 0.05 & Log2FC >= 0.1")
+marker_list <- getMarkers(marker_test, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 
-#Collect data with annotations
+# Add annotations
 peak_data <- data.frame(
   project_select@peakSet@ranges, project_select@peakSet@elementMetadata
 )
@@ -281,7 +282,7 @@ dev.off()
 markers_motifs <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "MotifMatrix",
-  groupBy = groupcompare,
+  groupBy = "UpdateClustName",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
@@ -330,7 +331,7 @@ volcanom <- EnhancedVolcano(
 
 file_names <- getGroupBW(
   ArchRProj = project_select,
-  groupBy = groupcompare,
+  groupBy = "UpdateClustName",
   normMethod = "ReadsInTSS",
   tileSize = 100,
   maxCells = 1000,
