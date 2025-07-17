@@ -51,6 +51,14 @@ addArchRGenome(genome)
 
 setwd(work_dir)
 
+gene_dir <- file.path(work_dir, "gene_results")
+peak_dir <- file.path(work_dir, "peak_results")
+motif_dir <- file.path(work_dir, "motif_results")
+coverage_dir <- file.path(work_dir, "coverages")
+for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
+  if (!dir.exists(dir)) dir.create(dir)
+}
+
 proj_filter <- loadArchRProject(archr_path)
 
 condition_values <- proj_filter@cellColData$Condition@values
@@ -134,7 +142,7 @@ select_genes <- getMarkerFeatures(
 sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 write.csv(
   sample_gene_list,
-  file = paste0(project_name, "_sample_gene_list.csv"),
+  file = file.path(gene_dir, "all_genes.csv"),
   row.names = FALSE
 )
 
@@ -156,7 +164,7 @@ pairwise_df$Significance <- ifelse(
 )
 write.csv(
   pairwise_df,
-  file = paste0(project_name, "_gene_markers.csv"),
+  file = file.path(gene_dir, "marker_genes.csv"),
   row.names = FALSE
 )
 
@@ -178,7 +186,8 @@ volcano <- EnhancedVolcano(
   labSize = 4.0
 )
 
-pdf(paste0(project_name, "_", "volcano_gene.pdf"))
+ 
+pdf(file.path(gene_dir, "volcano_gene.pdf"))
 print(volcano)
 dev.off()
 
@@ -200,7 +209,7 @@ pma <- plotMarkers(
   cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
   plotAs = "MA"
 )
-pdf(paste0(project_name, "_MA_peak.pdf"))
+pdf(file.path(peak_dir, "MA_peaks.pdf"))
 print(pma)
 dev.off()
 
@@ -213,7 +222,7 @@ peak_data <- data.frame(
 total <- merge(peak_data, marker_list, by = c("start", "end"))
 
 write.csv(
-  total, file = paste0(project_name, "_peak_markers.csv"), row.names = FALSE
+  total, file = file.path(peak_dir, "all_peaks.csv"), row.names = FALSE
 )
 
 ############################# Compare Motifs #################################
@@ -228,7 +237,9 @@ df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
 df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
 df$rank <- seq_len(nrow(df))
 
-write.csv(df, file = paste0(project_name, "_motifsup.csv"), row.names = FALSE)
+write.csv(
+  df, file = file.path(motif_dir, "upRegulated_motifs.csv"), row.names = FALSE
+)
 
 gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   geom_point(size = 1) +
@@ -244,7 +255,7 @@ gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(paste0(project_name, "_UP", "motif_enrichment.pdf"))
+pdf(file.path(motif_dir, "upRegulated_motif_enrichment.pdf"))
 print(gg_up)
 dev.off()
 
@@ -259,7 +270,7 @@ df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
 df2$rank <- seq_len(nrow(df2))
 
 write.csv(
-  df2, file = paste0(project_name, "_motifsdown.csv"), row.names = FALSE
+  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"), row.names = FALSE
 )
 
 gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
@@ -275,7 +286,7 @@ gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(paste0(project_name, "_DOWN", "motif_enrichment.pdf"))
+pdf(file.path(motif_dir, "downRegulated_motif_enrichment.pdf"))
 print(gg_do)
 dev.off()
 
@@ -283,11 +294,21 @@ markers_motifs <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "MotifMatrix",
   groupBy = "UpdateClustName",
+  useGroups = conditionA,
+  bgdGroups = conditionB,
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
   maxCells = 5000,
   normBy = "none"
+)
+
+# Save stats for all genes
+motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & Log2FC >= -Inf")
+write.csv(
+  motifs_list,
+  file = file.path(motif_dir, "all_motifs.csv"),
+  row.names = FALSE
 )
 
 pairwise_motifs <- rowData(markers_motifs)$name
@@ -307,7 +328,7 @@ pairwise_dfm$Significance <- ifelse(
 pairwise_dfm <- na.omit(pairwise_dfm)
 write.csv(
   pairwise_dfm,
-  file = paste0(project_name, "_pairwise_motifs.csv"),
+  file = file.path(motif_dir, "marker_motifs.csv"),
   row.names = FALSE
 )
 
@@ -318,6 +339,7 @@ volcanom <- EnhancedVolcano(
   y = "mpvalue",
   ylim = c(0, abs(min(log10(pairwise_dfm$mpvalue)))),
   xlim = c(-2.5, 2.5),
+  xlab = bquote("MeanDiff"),
   title = paste0(
     colnames(assay(markers_motifs))[2],
     " vs ",
@@ -329,6 +351,11 @@ volcanom <- EnhancedVolcano(
   labSize = 4.0
 )
 
+pdf(file.path(motif_dir, "volcano_motif.pdf"))
+print(volcanom)
+dev.off()
+
+# Coverage files
 file_names <- getGroupBW(
   ArchRProj = project_select,
   groupBy = "UpdateClustName",
@@ -341,9 +368,5 @@ file_names <- getGroupBW(
 )
 
 for (file_name in file_names) {
-  file.copy(from = file_name, to = work_dir)  
+  file.copy(from = file_name, to = coverage_dir)  
 }
-
-pdf(paste0(project_name, "_", "volcano_motif.pdf"))
-print(volcanom)
-dev.off()
