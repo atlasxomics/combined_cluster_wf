@@ -304,7 +304,7 @@ markers_motifs <- getMarkerFeatures(
 )
 
 # Save stats for all genes
-motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & Log2FC >= -Inf")
+motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf")
 write.csv(
   motifs_list,
   file = file.path(motif_dir, "all_motifs.csv"),
