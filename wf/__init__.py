@@ -80,13 +80,22 @@ def compare_workflow(
     ArchRProject and grouping specifications, **compare clusters** generates,
     * for genes
         * volcano plot
-        * gene_markers.csv
+        * all_genes.csv: all genes with test results from ArchR::getMarkerFeatures
+        * marker_genes.csv: all_genes filtered and scored with significance
+        thresholds; data for the volcano plot.
     * for [peaks](https://www.archrproject.com/bookdown/pairwise-testing-between-groups.html)
-        * volcano plot
-        * peak_markers.csv
+        * MA Plot
+        * all_peaks: all peaks with test results from ArchR::getMarkerFeatures
+        * marker_peaks.csv: all_genes filtered and scored with significance
+        thresholds; data for the volcano plot.
     * for [motifs](https://www.archrproject.com/bookdown/motif-enrichment-in-differential-peaks.html​)
-        * enrichment plot
-        * motif_enrichment.csv
+        * [up/down]Regulated_motifs.csv: Up or down regulated motifs ranked by 
+        significance values; see ArchR [docs](https://www.archrproject.com/bookdown/motif-enrichment.html#motif-enrichment-in-differential-peaks)
+        * [up/down] enrichment plot: scatter plot of motifs ranked by -log10(FDR)
+        * all_motifs.csv: all motifs with test results from ArchR::getMarkerFeatures
+        * marker_motifs.csv: all_motifs filtered and scored with significance
+        thresholds; data for the volcano plot.
+        * volcano plot
 
     ## Inputs
     All input files for **compare clusters** must be on the latch.bio
@@ -110,10 +119,11 @@ def compare_workflow(
     #### Rules for groupings
     * Clusters can be specified as a common separated list (C2,C3,C5), a range
     (C2-C4), or a combination of the two (C2-C4,C6).
-    * Groupings **cannot** share clusters.  For example, C1-C3 versus C3,C4 is
-    not allowed.
     * The Condition **must** match that provided when generating the
     ArchRProject (i.e., in the **create ArchRProject** Latch Workflow).
+    * If no Condition is specified, groupings **cannot** share clusters.
+    For example, C1-C3 versus C3,C4 is not allowed; however, it is allow if the
+    groupings have different clusters.
     * If multiple conditions are supplied when creating the ArchRProject, use
     the Multiple button to select all samples with that condition label.  As
     an example, take an ArchRProject with the following samples:

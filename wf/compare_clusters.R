@@ -131,8 +131,6 @@ project_select <- proj_filter[store_subsets]
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
   groupBy = "UpdateClustName",
-  useGroups = conditionA,
-  bgdGroups = conditionB,
   useMatrix = "GeneScoreMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "ttest"
@@ -196,8 +194,6 @@ dev.off()
 marker_test <- getMarkerFeatures(
   ArchRProj = project_select,
   groupBy = "UpdateClustName",
-  useGroups = conditionA,
-  bgdGroups = conditionB,
   useMatrix = "PeakMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon"
@@ -294,8 +290,6 @@ markers_motifs <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "MotifMatrix",
   groupBy = "UpdateClustName",
-  useGroups = conditionA,
-  bgdGroups = conditionB,
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
@@ -370,3 +364,8 @@ file_names <- getGroupBW(
 for (file_name in file_names) {
   file.copy(from = file_name, to = coverage_dir)  
 }
+
+saveArchRProject(
+  ArchRProj = proj_filter,
+  outputDirectory = file.path("selected_ArchRProject")
+)
