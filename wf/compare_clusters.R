@@ -365,7 +365,4 @@ for (file_name in file_names) {
   file.copy(from = file_name, to = coverage_dir)  
 }
 
-saveArchRProject(
-  ArchRProj = proj_filter,
-  outputDirectory = file.path("selected_ArchRProject")
-)
+saveArchRProject(ArchRProj = proj_filter)
