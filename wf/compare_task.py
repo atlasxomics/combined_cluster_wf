@@ -1,12 +1,11 @@
 import logging
 import subprocess
 import re
-from latch import large_task
+from latch import custom_task
 from latch.types import LatchDir
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
 
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(message)s", level=logging.INFO
@@ -28,22 +27,24 @@ class Genome(Enum):
     hg38 = 'hg38'
 
 
-@dataclass
-class CompareOutput:
-    visual_output_dir: LatchDir
-
-
-def strip_string(input):
+def strip_string(input: str):
     return re.sub(r'\s+', '', input)
 
 
-def expand_string(input_string):
+def expand_string(input_string: str):
     """Split the input string into parts
     """
+
+    # Remove whitespace
     stripped_string = strip_string(input_string)
+
+    # 'C1,C2,C5-C7' -> ['C1', 'C2', 'C5-C7']
     split_comma = stripped_string.split(',')
     final_string = []
+
     for i in split_comma:
+
+        # Handle 'C5-C7', return [list] + ['C5', 'C6', C7']
         mult_digit = re.findall(r'\d+', i)
         if len(mult_digit) > 1:
 
@@ -61,6 +62,7 @@ def expand_string(input_string):
         else:
             final_string += [i]
 
+    # Convert list back into string: 'C1,C2,C3,C5,C6,C7'
     result_string = ','.join(final_string)
     return result_string
 
@@ -72,29 +74,37 @@ def resolve_bool(value: bool):
         return 'f'
 
 
-@large_task
+@custom_task(cpu=8, memory=64, storage_gib=1000)
 def compare_task(
     project_name: str,
-    groupings: List[Groupings],
+    groupings: Groupings,
     archrproject: LatchDir,
     genome: Genome,
-) -> CompareOutput:
+) -> LatchDir:
 
     out_dir = f"/root/{project_name}/"
     remote_dir = f"latch:///compare_outs/{project_name}"
 
+    # Have to ensure the project path is the same as when save in ArchR1.0.3
+    archrproject_name = archrproject.remote_path.split("/")[-1]
+    archrproj_dest = f"/root/{archrproject_name}"
+    subprocess.run(
+        ["mv", archrproject.local_path, archrproj_dest]
+    )
+
     subprocess.run(["mkdir", out_dir])
+
     _r_cmd = [
         "Rscript",
         "wf/compare_clusters.R",
         project_name,
-        expand_string(groupings[0].clusterA),
-        strip_string(groupings[0].conditionA),
-        resolve_bool(groupings[0].multipleA),
-        expand_string(groupings[0].clusterB),
-        strip_string(groupings[0].conditionB),
-        resolve_bool(groupings[0].multipleB),
-        archrproject.local_path,
+        expand_string(groupings.clusterA),
+        strip_string(groupings.conditionA),
+        resolve_bool(groupings.multipleA),
+        expand_string(groupings.clusterB),
+        strip_string(groupings.conditionB),
+        resolve_bool(groupings.multipleB),
+        archrproj_dest,
         genome.value,
         out_dir
     ]
@@ -104,27 +114,27 @@ def compare_task(
 
     logging.info("Rscript complete; uploading results.")
 
+    subprocess.run(["mv", archrproj_dest, out_dir])
+
     # Get rid of unnecessary files
     subprocess.run(
         ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"]
     )
 
-    return CompareOutput(
-        visual_output_dir=LatchDir(out_dir, remote_dir)
-    )
+    return LatchDir(out_dir, remote_dir)
 
 
 if __name__ == "__main__":
     compare_task(
-        project_name="D1234_default",
-        groupings=[Groupings(
-            clusterA="C4, C8, C3",
-            conditionA="Tumor",
-            multipleA=True,
-            clusterB="C1",
-            conditionB="Pdx",
-            multipleB=True
-        )],
-        archrproject="latch://13502.account/ArchRProjects/Gaykalova/Gaykalova_ArchRProject",
+        project_name="Pieper_154_brain_TBI-Sham_TBI-24_Cluster2_develop",
+        groupings=Groupings(
+            clusterA="2",
+            conditionA="Sham_24hr",
+            multipleA=False,
+            clusterB="2",
+            conditionB="TBI_24hr",
+            multipleB=False
+        ),
+        archrproject="latch://13502.account/snap_outs/Pieper_154_brain_ArchRFull_10Core/Pieper_154_brain_ArchRFull_10Core_ArchRProject",
         genome=Genome.mm10
     )

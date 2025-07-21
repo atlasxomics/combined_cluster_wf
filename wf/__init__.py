@@ -1,9 +1,7 @@
 """Latch workflow for comparing cluster/condition groupings in an ArchRProject
 """
 
-from wf.compare_task import compare_task, Groupings, Genome, CompareOutput
-
-from typing import List
+from wf.compare_task import compare_task, Groupings, Genome
 
 from latch.resources.workflow import workflow
 from latch.resources.launch_plan import LaunchPlan
@@ -20,7 +18,7 @@ metadata = LatchMetadata(
     display_name="compare clusters",
     author=LatchAuthor(
         name="AtlasXomics Inc.",
-        email="joshuab@atlasxomics.com",
+        email="jamesm@atlasxomics.com",
         github="https://github.com/atlasxomics",
     ),
     repository="https://github.com/atlasxomics/combined_cluster_wf",
@@ -52,7 +50,7 @@ metadata = LatchMetadata(
             display_name="Specifications of groupings",
             description="Cluster and condition specifications for the two \
                         cell groupings to be compared.",
-            samplesheet=True
+            batch_table_column=True
         ),
         'genome': LatchParameter(
             display_name='genome',
@@ -67,10 +65,10 @@ metadata = LatchMetadata(
 @workflow(metadata)
 def compare_workflow(
     project_name: str,
-    groupings: List[Groupings],
+    groupings: Groupings,
     archrproject: LatchDir,
     genome: Genome,
-) -> CompareOutput:
+) -> LatchDir:
 
     '''Explore differences in genes, peaks, and motifs within an ArchRProject.
 
@@ -82,13 +80,22 @@ def compare_workflow(
     ArchRProject and grouping specifications, **compare clusters** generates,
     * for genes
         * volcano plot
-        * gene_markers.csv
+        * all_genes.csv: all genes with test results from ArchR::getMarkerFeatures
+        * marker_genes.csv: all_genes filtered and scored with significance
+        thresholds; data for the volcano plot.
     * for [peaks](https://www.archrproject.com/bookdown/pairwise-testing-between-groups.html)
-        * volcano plot
-        * peak_markers.csv
+        * MA Plot
+        * all_peaks: all peaks with test results from ArchR::getMarkerFeatures
+        * marker_peaks.csv: all_genes filtered and scored with significance
+        thresholds; data for the volcano plot.
     * for [motifs](https://www.archrproject.com/bookdown/motif-enrichment-in-differential-peaks.html​)
-        * enrichment plot
-        * motif_enrichment.csv
+        * [up/down]Regulated_motifs.csv: Up or down regulated motifs ranked by 
+        significance values; see ArchR [docs](https://www.archrproject.com/bookdown/motif-enrichment.html#motif-enrichment-in-differential-peaks)
+        * [up/down] enrichment plot: scatter plot of motifs ranked by -log10(FDR)
+        * all_motifs.csv: all motifs with test results from ArchR::getMarkerFeatures
+        * marker_motifs.csv: all_motifs filtered and scored with significance
+        thresholds; data for the volcano plot.
+        * volcano plot
 
     ## Inputs
     All input files for **compare clusters** must be on the latch.bio
@@ -112,10 +119,11 @@ def compare_workflow(
     #### Rules for groupings
     * Clusters can be specified as a common separated list (C2,C3,C5), a range
     (C2-C4), or a combination of the two (C2-C4,C6).
-    * Groupings **cannot** share clusters.  For example, C1-C3 versus C3,C4 is
-    not allowed.
     * The Condition **must** match that provided when generating the
     ArchRProject (i.e., in the **create ArchRProject** Latch Workflow).
+    * If no Condition is specified, groupings **cannot** share clusters.
+    For example, C1-C3 versus C3,C4 is not allowed; however, it is allow if the
+    groupings have different clusters.
     * If multiple conditions are supplied when creating the ArchRProject, use
     the Multiple button to select all samples with that condition label.  As
     an example, take an ArchRProject with the following samples:
@@ -157,16 +165,14 @@ LaunchPlan(
     "default",
     {
         "project_name": "default",
-        "groupings": [
-            Groupings(
-                clusterA="C1-C3",
-                conditionA="WT",
-                multipleA=False,
-                clusterB="C4,C6,C7",
-                conditionB="Lupus",
-                multipleB=False
-            )
-        ],
+        "groupings": Groupings(
+            clusterA="C1-C3",
+            conditionA="WT",
+            multipleA=False,
+            clusterB="C4,C6,C7",
+            conditionB="Lupus",
+            multipleB=False
+        ),
         "archrproject": LatchDir(
             "s3://latch-public/test-data/13502/compare_ArchRProject",
         ),

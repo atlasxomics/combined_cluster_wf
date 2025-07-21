@@ -7,23 +7,20 @@ library(EnhancedVolcano)
 library(ggrepel)
 library(grid)
 library(gridExtra)
-library(harmony)
 library(hdf5r)
-library(knitr)
 library(Matrix)
 library(patchwork)
 library(pheatmap)
 library(purrr)
 library(RColorBrewer)
-library(rjson)
-library(rmarkdown)
 library(Seurat)
 library(SeuratObject)
 library(stringr)
 library(tibble)
 
 multiple_conditions <- function(archrConditions, user) {
-  # create a function with the name my_function
+  # From a list of conditions, returns all containing string 'user'.
+
   match_cond <- c()
   user_lowercase <- tolower(user)
   pattern <- paste0("\\b", user_lowercase, "\\b")
@@ -39,6 +36,7 @@ multiple_conditions <- function(archrConditions, user) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
+print(args)
 project_name <- args[1]
 clusterA <- args[2]
 conditionA <- args[3]
@@ -53,84 +51,97 @@ work_dir <- args[10]
 addArchRGenome(genome)
 
 setwd(work_dir)
+
+gene_dir <- file.path(work_dir, "gene_results")
+peak_dir <- file.path(work_dir, "peak_results")
+motif_dir <- file.path(work_dir, "motif_results")
+coverage_dir <- file.path(work_dir, "coverages")
+for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
+  if (!dir.exists(dir)) dir.create(dir)
+}
+
 proj_filter <- loadArchRProject(archr_path)
+
 condition_values <- proj_filter@cellColData$Condition@values
-if (multipleA_flag == "t") {
+if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
     conditionA <- multiple_conditions(condition_values, conditionA)
 }
-if (multipleB_flag == "t") {
+if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
     conditionB <- multiple_conditions(condition_values, conditionB)
 }
+
 combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
+
 clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
 clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
+
 conditionA_list <- unlist(strsplit(conditionA, ",", fixed = TRUE))
 conditionB_list <- unlist(strsplit(conditionB, ",", fixed = TRUE))
 
-store_subsets <- c()
+# Create boolean index for Group A
 if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
   subsetA <- which(
     proj_filter$Condition %in% conditionA_list & proj_filter$Clusters %in%
       clusterA_list,
   )
-} else if (length(conditionA_list) < 1 && length(clusterA_list) > 0) {
+
+} else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
   subsetA <- which(proj_filter$Clusters %in% clusterA_list)
-} else if (length(conditionA_list) > 0 && length(clusterA_list) < 1) {
+
+} else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
   subsetA <- which(proj_filter$Condition %in% conditionA_list)
+
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetA <- 1:all_indexes
 }
 
+# Create boolean index for Group B
 if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
   subsetB <- which(
     proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
       clusterB_list,
   )
-} else if (length(conditionB_list) < 1 && length(clusterB_list) > 0) {
+} else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
   subsetB <- which(proj_filter$Clusters %in% clusterB_list)
-} else if (length(conditionB) > 0 && length(clusterB_list) < 1) {
+
+} else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
   subsetB <- which(proj_filter$Condition %in% conditionB_list)
+
 } else {
   all_indexes <- length(proj_filter$Clusters)
   subsetB <- 1:all_indexes
 }
 
-tixel_amount <- (1 : nrow(proj_filter@cellColData))
+# Label Cells in subsets with condition/group label
 vector_value <- sapply(
-  tixel_amount,
+  (1 : nrow(proj_filter@cellColData)),
   function(x) ifelse(
     x %in% subsetA,
     conditionA,
     ifelse(x %in% subsetB, conditionB, "NO")
   )
 )
-df <- data.frame(proj_filter@cellColData) %>%
-  mutate(UpdateClustName = vector_value)
+proj_filter$UpdateClustName <- vector_value
 
-proj_filter$UpdateClustName <- df$UpdateClustName
-groupcompare <- "UpdateClustName"
+# Filter project to only Cells in groups subsets 
+store_subsets <- sort(unique(c(subsetA, subsetB)))
+project_select <- proj_filter[store_subsets]
 
-combined_subset <- c(subsetA, subsetB)
-unique_subset <- unique(combined_subset)
-store_subsets <- sort(unique_subset)
-subset_archr <- proj_filter[c(store_subsets)]
-project_select <- subset_archr
-
-###Calculate differential genes
-
+### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
+  groupBy = "UpdateClustName",
   useMatrix = "GeneScoreMatrix",
-  groupBy = groupcompare,
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon"
+  testMethod = "ttest"
 )
 
-sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 0.02")
+# Save stats for all genes
+sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 write.csv(
   sample_gene_list,
-  file = paste0(project_name, "_sample_gene_list.csv"),
+  file = file.path(gene_dir, "all_genes.csv"),
   row.names = FALSE
 )
 
@@ -140,6 +151,7 @@ FDR <- assay(select_genes, "FDR")[, 1]
 pvalue <- assay(select_genes, "Pval")[, 1]
 pairwise_df <- data.frame(pairwise_genes, log2FC, pvalue, FDR)
 pairwise_df <- na.omit(pairwise_df)
+
 pairwise_df$Significance <- ifelse(
   pairwise_df$pvalue < 0.05 & abs(pairwise_df$log2FC) >= 0.4,
   ifelse(
@@ -151,7 +163,7 @@ pairwise_df$Significance <- ifelse(
 )
 write.csv(
   pairwise_df,
-  file = paste0(project_name, "_gene_markers.csv"),
+  file = file.path(gene_dir, "marker_genes.csv"),
   row.names = FALSE
 )
 
@@ -173,7 +185,8 @@ volcano <- EnhancedVolcano(
   labSize = 4.0
 )
 
-pdf(paste0(project_name, "_", "volcano_gene.pdf"))
+ 
+pdf(file.path(gene_dir, "volcano_gene.pdf"))
 print(volcano)
 dev.off()
 
@@ -181,32 +194,32 @@ dev.off()
 
 marker_test <- getMarkerFeatures(
   ArchRProj = project_select,
+  groupBy = "UpdateClustName",
   useMatrix = "PeakMatrix",
-  groupBy = groupcompare,
-  testMethod = "wilcoxon",
   bias = c("TSSEnrichment", "log10(nFrags)"),
+  testMethod = "wilcoxon"
 )
 
 pma <- plotMarkers(
   seMarker = marker_test,
   name = conditionA,
-  cutOff = "FDR <= 0.1 & abs(Log2FC) >= 1",
+  cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
   plotAs = "MA"
 )
-pdf(paste0(project_name, "_volcano_peak.pdf"))
+pdf(file.path(peak_dir, "MA_peaks.pdf"))
 print(pma)
 dev.off()
 
-marker_list <- getMarkers(marker_test, cutOff = "Pval <= 0.05 & Log2FC >= 0.1")
+marker_list <- getMarkers(marker_test, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 
-#Collect data with annotations
+# Add annotations
 peak_data <- data.frame(
   project_select@peakSet@ranges, project_select@peakSet@elementMetadata
 )
 total <- merge(peak_data, marker_list, by = c("start", "end"))
 
 write.csv(
-  total, file = paste0(project_name, "_peak_markers.csv"), row.names = FALSE
+  total, file = file.path(peak_dir, "all_peaks.csv"), row.names = FALSE
 )
 
 ############################# Compare Motifs #################################
@@ -221,7 +234,9 @@ df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
 df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
 df$rank <- seq_len(nrow(df))
 
-write.csv(df, file = paste0(project_name, "_motifsup.csv"), row.names = FALSE)
+write.csv(
+  df, file = file.path(motif_dir, "upRegulated_motifs.csv"), row.names = FALSE
+)
 
 gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   geom_point(size = 1) +
@@ -237,7 +252,7 @@ gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(paste0(project_name, "_UP", "motif_enrichment.pdf"))
+pdf(file.path(motif_dir, "upRegulated_motif_enrichment.pdf"))
 print(gg_up)
 dev.off()
 
@@ -252,7 +267,7 @@ df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
 df2$rank <- seq_len(nrow(df2))
 
 write.csv(
-  df2, file = paste0(project_name, "_motifsdown.csv"), row.names = FALSE
+  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"), row.names = FALSE
 )
 
 gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
@@ -268,19 +283,27 @@ gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
   xlab("Rank Sorted TFs Enriched") +
   scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(paste0(project_name, "_DOWN", "motif_enrichment.pdf"))
+pdf(file.path(motif_dir, "downRegulated_motif_enrichment.pdf"))
 print(gg_do)
 dev.off()
 
 markers_motifs <- getMarkerFeatures(
   ArchRProj = project_select,
   useMatrix = "MotifMatrix",
-  groupBy = groupcompare,
+  groupBy = "UpdateClustName",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
   maxCells = 5000,
   normBy = "none"
+)
+
+# Save stats for all genes
+motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf")
+write.csv(
+  motifs_list,
+  file = file.path(motif_dir, "all_motifs.csv"),
+  row.names = FALSE
 )
 
 pairwise_motifs <- rowData(markers_motifs)$name
@@ -300,7 +323,7 @@ pairwise_dfm$Significance <- ifelse(
 pairwise_dfm <- na.omit(pairwise_dfm)
 write.csv(
   pairwise_dfm,
-  file = paste0(project_name, "_pairwise_motifs.csv"),
+  file = file.path(motif_dir, "marker_motifs.csv"),
   row.names = FALSE
 )
 
@@ -311,6 +334,7 @@ volcanom <- EnhancedVolcano(
   y = "mpvalue",
   ylim = c(0, abs(min(log10(pairwise_dfm$mpvalue)))),
   xlim = c(-2.5, 2.5),
+  xlab = bquote("MeanDiff"),
   title = paste0(
     colnames(assay(markers_motifs))[2],
     " vs ",
@@ -322,9 +346,14 @@ volcanom <- EnhancedVolcano(
   labSize = 4.0
 )
 
+pdf(file.path(motif_dir, "volcano_motif.pdf"))
+print(volcanom)
+dev.off()
+
+# Coverage files
 file_names <- getGroupBW(
   ArchRProj = project_select,
-  groupBy = groupcompare,
+  groupBy = "UpdateClustName",
   normMethod = "ReadsInTSS",
   tileSize = 100,
   maxCells = 1000,
@@ -334,9 +363,7 @@ file_names <- getGroupBW(
 )
 
 for (file_name in file_names) {
-  file.copy(from = file_name, to = work_dir)  
+  file.copy(from = file_name, to = coverage_dir)  
 }
 
-pdf(paste0(project_name, "_", "volcano_motif.pdf"))
-print(volcanom)
-dev.off()
+saveArchRProject(ArchRProj = proj_filter)
