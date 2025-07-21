@@ -86,7 +86,7 @@ def compare_task(
     remote_dir = f"latch:///compare_outs/{project_name}"
 
     # Have to ensure the project path is the same as when save in ArchR1.0.3
-    archrproject_name = archrproject.remote_path.title().split("/")[-1]
+    archrproject_name = archrproject.remote_path.split("/")[-1]
     archrproj_dest = f"/root/{archrproject_name}"
     subprocess.run(
         ["mv", archrproject.local_path, archrproj_dest]
@@ -126,15 +126,15 @@ def compare_task(
 
 if __name__ == "__main__":
     compare_task(
-        project_name="D1234_default",
+        project_name="Pieper_154_brain_TBI-Sham_TBI-24_Cluster2_develop",
         groupings=Groupings(
-            clusterA="C4, C8, C3",
-            conditionA="Tumor",
-            multipleA=True,
-            clusterB="C1",
-            conditionB="Pdx",
-            multipleB=True
+            clusterA="2",
+            conditionA="Sham_24hr",
+            multipleA=False,
+            clusterB="2",
+            conditionB="TBI_24hr",
+            multipleB=False
         ),
-        archrproject="latch://13502.account/ArchRProjects/Gaykalova/Gaykalova_ArchRProject",
+        archrproject="latch://13502.account/snap_outs/Pieper_154_brain_ArchRFull_10Core/Pieper_154_brain_ArchRFull_10Core_ArchRProject",
         genome=Genome.mm10
     )

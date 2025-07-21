@@ -36,6 +36,7 @@ multiple_conditions <- function(archrConditions, user) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
+print(args)
 project_name <- args[1]
 clusterA <- args[2]
 conditionA <- args[3]
