@@ -56,10 +56,10 @@ RUN apt-get update -y && \
     apt-get install -y r-cran-devtools libcairo2-dev libmagick++-dev libgdal-dev
 
 # Upgrade R to version 4.3.0
-RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.0.tar.gz
-RUN tar zxvf R-4.3.0.tar.gz && rm R-4.3.0.tar.gz 
-RUN cd R-4.3.0 && ./configure --enable-R-shlib
-RUN cd R-4.3.0 && make && make install
+RUN wget https://cran.r-project.org/src/base/R-4/R-4.3.3.tar.gz
+RUN tar zxvf R-4.3.3.tar.gz && rm R-4.3.3.tar.gz 
+RUN cd R-4.3.3 && ./configure --enable-R-shlib
+RUN cd R-4.3.3 && make && make install
 
 # Installation of R packages with renv
 RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/renv/renv_1.0.7.tar.gz', repos = NULL, type = 'source')"

@@ -85,7 +85,15 @@ def compare_task(
     out_dir = f"/root/{project_name}/"
     remote_dir = f"latch:///compare_outs/{project_name}"
 
+    # Have to ensure the project path is the same as when save in ArchR1.0.3
+    archrproject_name = archrproject.remote_path.title().split("/")[-1]
+    archrproj_dest = f"/root/{archrproject_name}"
+    subprocess.run(
+        ["mv", archrproject.local_path, archrproj_dest]
+    )
+
     subprocess.run(["mkdir", out_dir])
+
     _r_cmd = [
         "Rscript",
         "wf/compare_clusters.R",
@@ -96,7 +104,7 @@ def compare_task(
         expand_string(groupings.clusterB),
         strip_string(groupings.conditionB),
         resolve_bool(groupings.multipleB),
-        archrproject.local_path,
+        archrproj_dest,
         genome.value,
         out_dir
     ]
@@ -106,7 +114,7 @@ def compare_task(
 
     logging.info("Rscript complete; uploading results.")
 
-    subprocess.run(["mv", archrproject.local_path, f"{out_dir}/ArchRProject"])
+    subprocess.run(["mv", archrproj_dest, out_dir])
 
     # Get rid of unnecessary files
     subprocess.run(
