@@ -1,7 +1,8 @@
 """Latch workflow for comparing cluster/condition groupings in an ArchRProject
 """
+from typing import Union
 
-from wf.compare_task import compare_task, Groupings, Genome
+from wf.compare_task import compare_task, Barcodes, Groupings, Genome
 
 from latch.resources.workflow import workflow
 from latch.resources.launch_plan import LaunchPlan
@@ -65,7 +66,7 @@ metadata = LatchMetadata(
 @workflow(metadata)
 def compare_workflow(
     project_name: str,
-    groupings: Groupings,
+    groupings: Union[Groupings, Barcodes],
     archrproject: LatchDir,
     genome: Genome,
 ) -> LatchDir:

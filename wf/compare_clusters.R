@@ -19,7 +19,7 @@ library(stringr)
 library(tibble)
 
 multiple_conditions <- function(archrConditions, user) {
-  # From a list of conditions, returns all containing string 'user'.
+  # From a list of conditions, returns all containing string user.
 
   match_cond <- c()
   user_lowercase <- tolower(user)
@@ -38,15 +38,18 @@ multiple_conditions <- function(archrConditions, user) {
 args <- commandArgs(trailingOnly = TRUE)
 print(args)
 project_name <- args[1]
-clusterA <- args[2]
-conditionA <- args[3]
-multipleA_flag <- args[4]
-clusterB <- args[5]
-conditionB <- args[6]
-multipleB_flag <- args[7]
-archr_path <- args[8]
-genome <- args[9]
-work_dir <- args[10]
+g_type <- args[2]
+clusterA <- args[3]
+conditionA <-  args[4]
+multipleA_flag <- args[5]
+clusterB <- args[6]
+conditionB <- args[7]
+multipleB_flag <- args[8]
+barcodesA <- args[9]
+barcodesB <- args[10]
+archr_path <- args[11]
+genome <- args[12]
+work_dir <- args[13]
 
 addArchRGenome(genome)
 
@@ -62,55 +65,67 @@ for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
 
 proj_filter <- loadArchRProject(archr_path)
 
-condition_values <- proj_filter@cellColData$Condition@values
-if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
-    conditionA <- multiple_conditions(condition_values, conditionA)
-}
-if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
-    conditionB <- multiple_conditions(condition_values, conditionB)
-}
+if (g_type == "groupings") {
+  condition_values <- proj_filter@cellColData$Condition@values
+  if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
+      conditionA <- multiple_conditions(condition_values, conditionA)
+  }
+  if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
+      conditionB <- multiple_conditions(condition_values, conditionB)
+  }
 
-combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
+  combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
 
-clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
-clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
+  clusterA_list <- unlist(strsplit(clusterA, ","))
+  clusterB_list <- unlist(strsplit(clusterB, ","))
 
-conditionA_list <- unlist(strsplit(conditionA, ",", fixed = TRUE))
-conditionB_list <- unlist(strsplit(conditionB, ",", fixed = TRUE))
+  conditionA_list <- unlist(strsplit(conditionA, ","))
+  conditionB_list <- unlist(strsplit(conditionB, ","))
 
-# Create boolean index for Group A
-if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
-  subsetA <- which(
-    proj_filter$Condition %in% conditionA_list & proj_filter$Clusters %in%
-      clusterA_list,
-  )
+  # Get index for Group A
+  if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
+    subsetA <- which(
+      proj_filter$Condition %in% conditionA_list &
+      proj_filter$Clusters %in% clusterA_list,
+    )
 
-} else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
-  subsetA <- which(proj_filter$Clusters %in% clusterA_list)
+  } else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
+    subsetA <- which(proj_filter$Clusters %in% clusterA_list)
 
-} else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
-  subsetA <- which(proj_filter$Condition %in% conditionA_list)
+  } else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
+    subsetA <- which(proj_filter$Condition %in% conditionA_list)
 
-} else {
-  all_indexes <- length(proj_filter$Clusters)
-  subsetA <- 1:all_indexes
-}
+  } else {
+    all_indexes <- length(proj_filter$Clusters)
+    subsetA <- 1:all_indexes
+  }
 
-# Create boolean index for Group B
-if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
-  subsetB <- which(
-    proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
-      clusterB_list,
-  )
-} else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
-  subsetB <- which(proj_filter$Clusters %in% clusterB_list)
+  # Get index for Group B
+  if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
+    subsetB <- which(
+      proj_filter$Condition %in% conditionB_list &
+      proj_filter$Clusters %in% clusterB_list,
+    )
+  } else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
+    subsetB <- which(proj_filter$Clusters %in% clusterB_list)
 
-} else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
-  subsetB <- which(proj_filter$Condition %in% conditionB_list)
+  } else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
+    subsetB <- which(proj_filter$Condition %in% conditionB_list)
 
-} else {
-  all_indexes <- length(proj_filter$Clusters)
-  subsetB <- 1:all_indexes
+  } else {
+    all_indexes <- length(proj_filter$Clusters)
+    subsetB <- 1:all_indexes
+  }
+} else if (g_type == "barcodes") {
+
+  barcodesA_list <- unlist(strsplit(barcodesA, ","))
+  barcodesB_list <- unlist(strsplit(barcodesB, ","))
+
+  conditionA <- "GroupA"
+  conditionB <- "GroupB"
+
+  subsetA <- which(row.names(proj_filter@cellColData) %in% barcodesA_list)
+  subsetB <- which(row.names(proj_filter@cellColData) %in% barcodesB_list)
 }
 
 # Label Cells in subsets with condition/group label
@@ -124,7 +139,7 @@ vector_value <- sapply(
 )
 proj_filter$UpdateClustName <- vector_value
 
-# Filter project to only Cells in groups subsets 
+# Filter project to only Cells in groups subsets
 store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
 
