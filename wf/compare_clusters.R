@@ -18,6 +18,11 @@ library(SeuratObject)
 library(stringr)
 library(tibble)
 
+get_cfg_path <- function(args) {
+  i <- which(args == "--config")
+  if (length(i) == 1 && (i + 1) <= length(args)) args[i + 1] else NULL
+}
+
 multiple_conditions <- function(archrConditions, user) {
   # From a list of conditions, returns all containing string user.
 
@@ -36,20 +41,37 @@ multiple_conditions <- function(archrConditions, user) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-print(args)
-project_name <- args[1]
-g_type <- args[2]
-clusterA <- args[3]
-conditionA <-  args[4]
-multipleA_flag <- args[5]
-clusterB <- args[6]
-conditionB <- args[7]
-multipleB_flag <- args[8]
-barcodesA <- args[9]
-barcodesB <- args[10]
-archr_path <- args[11]
-genome <- args[12]
-work_dir <- args[13]
+
+cfg_path <- get_cfg_path(args)
+
+if (!is.null(cfg_path)) {
+  suppressPackageStartupMessages(library(jsonlite))
+  cfg <- jsonlite::fromJSON(cfg_path)
+
+  project_name   <- cfg$project_name
+  mode           <- cfg$mode
+  archr_path     <- cfg$archr_path
+  genome         <- cfg$genome
+  work_dir       <- cfg$out_dir
+
+  if (identical(mode, "groupings")) {
+    clusterA   <- cfg$groupings$clusterA
+    conditionA <- cfg$groupings$conditionA
+    multipleA  <- cfg$groupings$multipleA
+    clusterB   <- cfg$groupings$clusterB
+    conditionB <- cfg$groupings$conditionB
+    multipleB  <- cfg$groupings$multipleB
+
+  } else if (identical(mode, "barcodes")) {
+    groupA <- cfg$barcodes$groupA
+    groupB <- cfg$barcodes$groupB
+
+  } else {
+    stop("Unknown mode in config: ", mode)
+  }
+} else {
+  stop("Missing --config argument. (Legacy positional args disabled in this run.)")
+}
 
 addArchRGenome(genome)
 
@@ -65,7 +87,7 @@ for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
 
 proj_filter <- loadArchRProject(archr_path)
 
-if (g_type == "groupings") {
+if (mode == "groupings") {
   condition_values <- proj_filter@cellColData$Condition@values
   if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
       conditionA <- multiple_conditions(condition_values, conditionA)
@@ -116,10 +138,10 @@ if (g_type == "groupings") {
     all_indexes <- length(proj_filter$Clusters)
     subsetB <- 1:all_indexes
   }
-} else if (g_type == "barcodes") {
+} else if (mode == "barcodes") {
 
-  barcodesA_list <- unlist(strsplit(barcodesA, ","))
-  barcodesB_list <- unlist(strsplit(barcodesB, ","))
+  barcodesA_list <- unlist(strsplit(groupA, ","))
+  barcodesB_list <- unlist(strsplit(groupB, ","))
 
   conditionA <- "GroupA"
   conditionB <- "GroupB"

@@ -1,6 +1,10 @@
+import json
 import logging
+import os
 import subprocess
+import tempfile
 import re
+
 from latch import custom_task
 from latch.types import LatchDir
 
@@ -96,60 +100,76 @@ def compare_task(
     archrproject_name = archrproject.remote_path.split("/")[-1]
     archrproj_dest = f"/root/{archrproject_name}"
     subprocess.run(
-        ["mv", archrproject.local_path, archrproj_dest]
+        ["mv", archrproject.local_path, archrproj_dest], check=True
     )
 
-    subprocess.run(["mkdir", out_dir])
-    g_type = "groupings" if type(groupings).__name__ == "Groupings" else "barcodes"
+    subprocess.run(["mkdir", out_dir], check=True)
+    mode = ("groupings" if type(groupings).__name__ == "Groupings"
+              else "barcodes")
 
-    if g_type == "groupings":
-        _r_cmd = [
-            "Rscript",
-            "wf/compare_clusters.R",
-            project_name,                        # 1
-            g_type,                              # 2
-            expand_string(groupings.clusterA),   # 3
-            strip_string(groupings.conditionA),  # 4
-            resolve_bool(groupings.multipleA),   # 5
-            expand_string(groupings.clusterB),   # 6
-            strip_string(groupings.conditionB),  # 7
-            resolve_bool(groupings.multipleB),   # 8
-            "None",                              # 9
-            "None",                              # 10
-            archrproj_dest,                      # 11
-            genome.value,                        # 12
-            out_dir                              # 13
-        ]
+    if mode == "groupings":
+        payload = {
+            "project_name": project_name,
+            "mode": mode,
+            "groupings": {
+                "clusterA": expand_string(groupings.clusterA),
+                "conditionA": strip_string(groupings.conditionA),
+                "multipleA": resolve_bool(groupings.multipleA),
+                "clusterB": expand_string(groupings.clusterB),
+                "conditionB": strip_string(groupings.conditionB),
+                "multipleB": resolve_bool(groupings.multipleB),
+            },
+            "barcodes": None,
+            "archr_path": archrproj_dest,
+            "genome": genome.value,
+            "out_dir": out_dir,
+        }
 
-    elif g_type == "barcodes":
-        _r_cmd = [
-            "Rscript",
-            "wf/compare_clusters.R",
-            project_name,                        # 1
-            g_type,                              # 2
-            "None",                              # 3
-            "None",                              # 4
-            "None",                              # 5
-            "None",                              # 6
-            "None",                              # 7
-            "None",                              # 8
-            groupings.groupA,                    # 9
-            groupings.groupB,                    # 10
-            archrproj_dest,                      # 11
-            genome.value,                        # 12
-            out_dir                              # 13
-        ]
+    elif mode == "barcodes":
+        payload = {
+            "project_name": project_name,
+            "mode": mode,
+            "groupings": None,
+            "barcodes": {
+                "groupA": groupings.groupA,
+                "groupB": groupings.groupB,
+            },
+            "archr_path": archrproj_dest,
+            "genome": genome.value,
+            "out_dir": out_dir,
+        }
 
-    logging.info("Initiating R script.")
-    subprocess.run(_r_cmd, check=True)
+    # Write temp JSON config and call R
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(payload, f)
+        cfg_path = f.name
+
+    try:
+        logging.info("Initiating R script with config.")
+        subprocess.run(
+            [
+                "Rscript",
+                "--vanilla",
+                "wf/compare_clusters.R",
+                "--config",
+                cfg_path
+            ],
+            check=True,
+        )
+    finally:
+        # Best-effort cleanup of temp file
+        try:
+            os.unlink(cfg_path)
+        except OSError:
+            pass
 
     logging.info("Rscript complete; uploading results.")
 
-    subprocess.run(["mv", archrproj_dest, out_dir])
+    subprocess.run(["mv", archrproj_dest, out_dir], check=True)
 
     # Get rid of unnecessary files
     subprocess.run(
-        ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"]
+        ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"], check=True
     )
 
     return LatchDir(out_dir, remote_dir)
