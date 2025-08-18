@@ -6,7 +6,7 @@ import tempfile
 import re
 
 from latch import custom_task
-from latch.types import LatchDir
+from latch.types import LatchDir, LatchFile
 
 from dataclasses import dataclass
 from enum import Enum
@@ -88,7 +88,7 @@ def resolve_bool(value: bool):
 @custom_task(cpu=8, memory=64, storage_gib=1000)
 def compare_task(
     project_name: str,
-    groupings: Union[Groupings, Barcodes],
+    groupings: Union[Groupings, Barcodes, LatchFile],
     archrproject: LatchDir,
     genome: Genome,
 ) -> LatchDir:
@@ -104,8 +104,13 @@ def compare_task(
     )
 
     subprocess.run(["mkdir", out_dir], check=True)
-    mode = ("groupings" if type(groupings).__name__ == "Groupings"
-              else "barcodes")
+
+    mode_dir = {
+        "Groupings": "groupings",
+        "Barcodes": "barcodes",
+        "LatchFile": "file"
+    }
+    mode = mode_dir[type(groupings).__name__]
 
     if mode == "groupings":
         payload = {
@@ -133,6 +138,24 @@ def compare_task(
             "barcodes": {
                 "groupA": groupings.groupA,
                 "groupB": groupings.groupB,
+            },
+            "archr_path": archrproj_dest,
+            "genome": genome.value,
+            "out_dir": out_dir,
+        }
+    elif mode == "file":
+        with open(groupings.local_path) as f:
+            cfg = json.load(f)
+        groupA_bcs = cfg.get("groupA")
+        groupB_bcs = cfg.get("groupB")
+
+        payload = {
+            "project_name": project_name,
+            "mode": "barcodes",
+            "groupings": None,
+            "barcodes": {
+                "groupA": groupA_bcs,
+                "groupB": groupB_bcs,
             },
             "archr_path": archrproj_dest,
             "genome": genome.value,

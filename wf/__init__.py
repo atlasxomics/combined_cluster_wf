@@ -9,6 +9,7 @@ from latch.resources.launch_plan import LaunchPlan
 from latch.types import (
     LatchAuthor,
     LatchDir,
+    LatchFile,
     LatchMetadata,
     LatchParameter,
     LatchRule,
@@ -66,7 +67,7 @@ metadata = LatchMetadata(
 @workflow(metadata)
 def compare_workflow(
     project_name: str,
-    groupings: Union[Groupings, Barcodes],
+    groupings: Union[Groupings, Barcodes, LatchFile],
     archrproject: LatchDir,
     genome: Genome,
 ) -> LatchDir:
