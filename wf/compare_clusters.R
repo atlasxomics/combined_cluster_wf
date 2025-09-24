@@ -89,10 +89,10 @@ proj_filter <- loadArchRProject(archr_path)
 
 if (mode == "groupings") {
   condition_values <- proj_filter@cellColData$Condition@values
-  if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
+  if (multipleA == "t") {  # Get all conditions containing "conditionA"
       conditionA <- multiple_conditions(condition_values, conditionA)
   }
-  if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
+  if (multipleB == "t") {  # Get all conditions containing "conditionB"
       conditionB <- multiple_conditions(condition_values, conditionB)
   }
 
