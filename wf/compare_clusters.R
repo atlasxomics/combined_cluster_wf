@@ -96,8 +96,6 @@ if (mode == "groupings") {
       conditionB <- multiple_conditions(condition_values, conditionB)
   }
 
-  combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
-
   clusterA_list <- unlist(strsplit(clusterA, ","))
   clusterB_list <- unlist(strsplit(clusterB, ","))
 
@@ -131,7 +129,7 @@ if (mode == "groupings") {
   } else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
     subsetB <- which(proj_filter$Clusters %in% clusterB_list)
 
-  } else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
+  } else if (length(conditionB_list) > 0 && length(clusterB_list) == 0) {
     subsetB <- which(proj_filter$Condition %in% conditionB_list)
 
   } else {
@@ -222,7 +220,6 @@ volcano <- EnhancedVolcano(
   labSize = 4.0
 )
 
- 
 pdf(file.path(gene_dir, "volcano_gene.pdf"))
 print(volcano)
 dev.off()
@@ -400,7 +397,7 @@ file_names <- getGroupBW(
 )
 
 for (file_name in file_names) {
-  file.copy(from = file_name, to = coverage_dir)  
+  file.copy(from = file_name, to = coverage_dir)
 }
 
-saveArchRProject(ArchRProj = proj_filter)
+saveArchRProject(ArchRProj = project_select)
