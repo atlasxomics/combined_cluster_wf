@@ -173,7 +173,9 @@ select_genes <- getMarkerFeatures(
 )
 
 # Save stats for all genes
-sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf")
+sample_gene_list <- getMarkers(
+  select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf"
+)
 write.csv(
   sample_gene_list,
   file = file.path(gene_dir, "all_genes.csv"),
@@ -191,8 +193,8 @@ pairwise_df$Significance <- ifelse(
   pairwise_df$pvalue < 0.05 & abs(pairwise_df$log2FC) >= 0.4,
   ifelse(
     pairwise_df$log2FC > 0,
-    colnames(assay(select_genes))[2],
-    colnames(assay(select_genes))[1]
+    colnames(assay(select_genes))[1],
+    colnames(assay(select_genes))[2]
   ),
   "Not significant"
 )
@@ -210,9 +212,9 @@ volcano <- EnhancedVolcano(
   ylim = c(0, abs(min(log10(pairwise_df$pvalue)))),
   xlim =  c(-2.5, 2.5),
   title = paste0(
-    colnames(assay(select_genes))[2],
+    colnames(assay(select_genes))[1],
     " vs ",
-    colnames(assay(select_genes))[1]
+    colnames(assay(select_genes))[2]
   ),
   pCutoff = 0.05,
   FCcutoff = 0.4,
@@ -275,11 +277,11 @@ write.csv(
 gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   geom_point(size = 1) +
   ggrepel::geom_label_repel(
-        data = df[rev(seq_len(30)), ],
-        aes(x = rank, y = mlog10Padj, label = TF),
-        size = 1.5,
-        nudge_x = 2,
-        color = "black"
+    data = df[rev(seq_len(30)), ],
+    aes(x = rank, y = mlog10Padj, label = TF),
+    size = 1.5,
+    nudge_x = 2,
+    color = "black"
   ) +
   theme_ArchR() +
   ylab("-log10(P-adj) Motif Enrichment") +
@@ -301,7 +303,8 @@ df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
 df2$rank <- seq_len(nrow(df2))
 
 write.csv(
-  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"), row.names = FALSE
+  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"),
+  row.names = FALSE
 )
 
 gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
@@ -333,7 +336,9 @@ markers_motifs <- getMarkerFeatures(
 )
 
 # Save stats for all genes
-motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf")
+motifs_list <- getMarkers(
+  markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf"
+)
 write.csv(
   motifs_list,
   file = file.path(motif_dir, "all_motifs.csv"),
@@ -350,8 +355,8 @@ pairwise_dfm$Significance <- ifelse(
   pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
   ifelse(
     pairwise_df$mpvalue > 0,
-    colnames(assay(markers_motifs))[2],
-    colnames(assay(markers_motifs))[1]
+    colnames(assay(markers_motifs))[1],
+    colnames(assay(markers_motifs))[2]
   ),
   "Not significant")
 pairwise_dfm <- na.omit(pairwise_dfm)
@@ -370,9 +375,9 @@ volcanom <- EnhancedVolcano(
   xlim = c(-2.5, 2.5),
   xlab = bquote("MeanDiff"),
   title = paste0(
-    colnames(assay(markers_motifs))[2],
+    colnames(assay(markers_motifs))[1],
     " vs ",
-    colnames(assay(markers_motifs))[1]
+    colnames(assay(markers_motifs))[2]
   ),
   pCutoff = 0.05,
   FCcutoff = 0.4,
@@ -400,4 +405,8 @@ for (file_name in file_names) {
   file.copy(from = file_name, to = coverage_dir)
 }
 
-saveArchRProject(ArchRProj = project_select)
+saveArchRProject(
+  ArchRProj = project_select,
+  outputDirectory = paste0(project_name, "_ArchRProject"),
+  dropCells = TRUE
+)
