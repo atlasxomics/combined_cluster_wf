@@ -188,8 +188,6 @@ def compare_task(
 
     logging.info("Rscript complete; uploading results.")
 
-    subprocess.run(["mv", archrproj_dest, out_dir], check=True)
-
     # Get rid of unnecessary files
     subprocess.run(
         ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"], check=True
