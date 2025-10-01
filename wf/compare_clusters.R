@@ -18,8 +18,13 @@ library(SeuratObject)
 library(stringr)
 library(tibble)
 
+get_cfg_path <- function(args) {
+  i <- which(args == "--config")
+  if (length(i) == 1 && (i + 1) <= length(args)) args[i + 1] else NULL
+}
+
 multiple_conditions <- function(archrConditions, user) {
-  # From a list of conditions, returns all containing string 'user'.
+  # From a list of conditions, returns all containing string user.
 
   match_cond <- c()
   user_lowercase <- tolower(user)
@@ -36,17 +41,37 @@ multiple_conditions <- function(archrConditions, user) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-print(args)
-project_name <- args[1]
-clusterA <- args[2]
-conditionA <- args[3]
-multipleA_flag <- args[4]
-clusterB <- args[5]
-conditionB <- args[6]
-multipleB_flag <- args[7]
-archr_path <- args[8]
-genome <- args[9]
-work_dir <- args[10]
+
+cfg_path <- get_cfg_path(args)
+
+if (!is.null(cfg_path)) {
+  suppressPackageStartupMessages(library(jsonlite))
+  cfg <- jsonlite::fromJSON(cfg_path)
+
+  project_name   <- cfg$project_name
+  mode           <- cfg$mode
+  archr_path     <- cfg$archr_path
+  genome         <- cfg$genome
+  work_dir       <- cfg$out_dir
+
+  if (identical(mode, "groupings")) {
+    clusterA   <- cfg$groupings$clusterA
+    conditionA <- cfg$groupings$conditionA
+    multipleA  <- cfg$groupings$multipleA
+    clusterB   <- cfg$groupings$clusterB
+    conditionB <- cfg$groupings$conditionB
+    multipleB  <- cfg$groupings$multipleB
+
+  } else if (identical(mode, "barcodes")) {
+    groupA <- cfg$barcodes$groupA
+    groupB <- cfg$barcodes$groupB
+
+  } else {
+    stop("Unknown mode in config: ", mode)
+  }
+} else {
+  stop("Missing --config argument. (Legacy positional args disabled in this run.)")
+}
 
 addArchRGenome(genome)
 
@@ -62,55 +87,65 @@ for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
 
 proj_filter <- loadArchRProject(archr_path)
 
-condition_values <- proj_filter@cellColData$Condition@values
-if (multipleA_flag == "t") {  # Get all conditions containing "conditionA"
-    conditionA <- multiple_conditions(condition_values, conditionA)
-}
-if (multipleB_flag == "t") {  # Get all conditions containing "conditionB"
-    conditionB <- multiple_conditions(condition_values, conditionB)
-}
+if (mode == "groupings") {
+  condition_values <- proj_filter@cellColData$Condition@values
+  if (multipleA == "t") {  # Get all conditions containing "conditionA"
+      conditionA <- multiple_conditions(condition_values, conditionA)
+  }
+  if (multipleB == "t") {  # Get all conditions containing "conditionB"
+      conditionB <- multiple_conditions(condition_values, conditionB)
+  }
 
-combine_vec <- paste(unique(proj_filter$Clusters), collapse = ",")
+  clusterA_list <- unlist(strsplit(clusterA, ","))
+  clusterB_list <- unlist(strsplit(clusterB, ","))
 
-clusterA_list <- unlist(strsplit(clusterA, ",", fixed = TRUE))
-clusterB_list <- unlist(strsplit(clusterB, ",", fixed = TRUE))
+  conditionA_list <- unlist(strsplit(conditionA, ","))
+  conditionB_list <- unlist(strsplit(conditionB, ","))
 
-conditionA_list <- unlist(strsplit(conditionA, ",", fixed = TRUE))
-conditionB_list <- unlist(strsplit(conditionB, ",", fixed = TRUE))
+  # Get index for Group A
+  if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
+    subsetA <- which(
+      proj_filter$Condition %in% conditionA_list &
+      proj_filter$Clusters %in% clusterA_list,
+    )
 
-# Create boolean index for Group A
-if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
-  subsetA <- which(
-    proj_filter$Condition %in% conditionA_list & proj_filter$Clusters %in%
-      clusterA_list,
-  )
+  } else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
+    subsetA <- which(proj_filter$Clusters %in% clusterA_list)
 
-} else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
-  subsetA <- which(proj_filter$Clusters %in% clusterA_list)
+  } else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
+    subsetA <- which(proj_filter$Condition %in% conditionA_list)
 
-} else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
-  subsetA <- which(proj_filter$Condition %in% conditionA_list)
+  } else {
+    all_indexes <- length(proj_filter$Clusters)
+    subsetA <- 1:all_indexes
+  }
 
-} else {
-  all_indexes <- length(proj_filter$Clusters)
-  subsetA <- 1:all_indexes
-}
+  # Get index for Group B
+  if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
+    subsetB <- which(
+      proj_filter$Condition %in% conditionB_list &
+      proj_filter$Clusters %in% clusterB_list,
+    )
+  } else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
+    subsetB <- which(proj_filter$Clusters %in% clusterB_list)
 
-# Create boolean index for Group B
-if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
-  subsetB <- which(
-    proj_filter$Condition %in% conditionB_list & proj_filter$Clusters %in%
-      clusterB_list,
-  )
-} else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
-  subsetB <- which(proj_filter$Clusters %in% clusterB_list)
+  } else if (length(conditionB_list) > 0 && length(clusterB_list) == 0) {
+    subsetB <- which(proj_filter$Condition %in% conditionB_list)
 
-} else if (length(conditionB) > 0 && length(clusterB_list) == 1) {
-  subsetB <- which(proj_filter$Condition %in% conditionB_list)
+  } else {
+    all_indexes <- length(proj_filter$Clusters)
+    subsetB <- 1:all_indexes
+  }
+} else if (mode == "barcodes") {
 
-} else {
-  all_indexes <- length(proj_filter$Clusters)
-  subsetB <- 1:all_indexes
+  barcodesA_list <- unlist(strsplit(groupA, ","))
+  barcodesB_list <- unlist(strsplit(groupB, ","))
+
+  conditionA <- "GroupA"
+  conditionB <- "GroupB"
+
+  subsetA <- which(row.names(proj_filter@cellColData) %in% barcodesA_list)
+  subsetB <- which(row.names(proj_filter@cellColData) %in% barcodesB_list)
 }
 
 # Label Cells in subsets with condition/group label
@@ -124,7 +159,7 @@ vector_value <- sapply(
 )
 proj_filter$UpdateClustName <- vector_value
 
-# Filter project to only Cells in groups subsets 
+# Filter project to only Cells in groups subsets
 store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
 
@@ -138,7 +173,9 @@ select_genes <- getMarkerFeatures(
 )
 
 # Save stats for all genes
-sample_gene_list <- getMarkers(select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf")
+sample_gene_list <- getMarkers(
+  select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf"
+)
 write.csv(
   sample_gene_list,
   file = file.path(gene_dir, "all_genes.csv"),
@@ -156,8 +193,8 @@ pairwise_df$Significance <- ifelse(
   pairwise_df$pvalue < 0.05 & abs(pairwise_df$log2FC) >= 0.4,
   ifelse(
     pairwise_df$log2FC > 0,
-    colnames(assay(select_genes))[2],
-    colnames(assay(select_genes))[1]
+    colnames(assay(select_genes))[1],
+    colnames(assay(select_genes))[2]
   ),
   "Not significant"
 )
@@ -175,9 +212,9 @@ volcano <- EnhancedVolcano(
   ylim = c(0, abs(min(log10(pairwise_df$pvalue)))),
   xlim =  c(-2.5, 2.5),
   title = paste0(
-    colnames(assay(select_genes))[2],
+    colnames(assay(select_genes))[1],
     " vs ",
-    colnames(assay(select_genes))[1]
+    colnames(assay(select_genes))[2]
   ),
   pCutoff = 0.05,
   FCcutoff = 0.4,
@@ -185,7 +222,6 @@ volcano <- EnhancedVolcano(
   labSize = 4.0
 )
 
- 
 pdf(file.path(gene_dir, "volcano_gene.pdf"))
 print(volcano)
 dev.off()
@@ -241,11 +277,11 @@ write.csv(
 gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
   geom_point(size = 1) +
   ggrepel::geom_label_repel(
-        data = df[rev(seq_len(30)), ],
-        aes(x = rank, y = mlog10Padj, label = TF),
-        size = 1.5,
-        nudge_x = 2,
-        color = "black"
+    data = df[rev(seq_len(30)), ],
+    aes(x = rank, y = mlog10Padj, label = TF),
+    size = 1.5,
+    nudge_x = 2,
+    color = "black"
   ) +
   theme_ArchR() +
   ylab("-log10(P-adj) Motif Enrichment") +
@@ -267,7 +303,8 @@ df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
 df2$rank <- seq_len(nrow(df2))
 
 write.csv(
-  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"), row.names = FALSE
+  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"),
+  row.names = FALSE
 )
 
 gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
@@ -299,7 +336,9 @@ markers_motifs <- getMarkerFeatures(
 )
 
 # Save stats for all genes
-motifs_list <- getMarkers(markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf")
+motifs_list <- getMarkers(
+  markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf"
+)
 write.csv(
   motifs_list,
   file = file.path(motif_dir, "all_motifs.csv"),
@@ -316,8 +355,8 @@ pairwise_dfm$Significance <- ifelse(
   pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
   ifelse(
     pairwise_df$mpvalue > 0,
-    colnames(assay(markers_motifs))[2],
-    colnames(assay(markers_motifs))[1]
+    colnames(assay(markers_motifs))[1],
+    colnames(assay(markers_motifs))[2]
   ),
   "Not significant")
 pairwise_dfm <- na.omit(pairwise_dfm)
@@ -336,9 +375,9 @@ volcanom <- EnhancedVolcano(
   xlim = c(-2.5, 2.5),
   xlab = bquote("MeanDiff"),
   title = paste0(
-    colnames(assay(markers_motifs))[2],
+    colnames(assay(markers_motifs))[1],
     " vs ",
-    colnames(assay(markers_motifs))[1]
+    colnames(assay(markers_motifs))[2]
   ),
   pCutoff = 0.05,
   FCcutoff = 0.4,
@@ -363,7 +402,11 @@ file_names <- getGroupBW(
 )
 
 for (file_name in file_names) {
-  file.copy(from = file_name, to = coverage_dir)  
+  file.copy(from = file_name, to = coverage_dir)
 }
 
-saveArchRProject(ArchRProj = proj_filter)
+saveArchRProject(
+  ArchRProj = project_select,
+  outputDirectory = paste0(project_name, "_ArchRProject"),
+  dropCells = TRUE
+)
