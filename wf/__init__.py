@@ -1,6 +1,7 @@
 """Latch workflow for comparing cluster/condition groupings in an ArchRProject
 """
-from typing import Union
+from typing import Annotated, Union
+from flytekit.core.annotation import FlyteAnnotation
 
 from wf.compare_task import compare_task, Barcodes, Groupings, Genome
 
@@ -50,8 +51,8 @@ metadata = LatchMetadata(
         ),
         "groupings": LatchParameter(
             display_name="Specifications of groupings",
-            description="Cluster and condition specifications for the two \
-                        cell groupings to be compared.",
+            description="Cluster, condition, and sample specifications for \
+                        the two cell groupings to be compared.",
             batch_table_column=True
         ),
         'genome': LatchParameter(
@@ -67,7 +68,12 @@ metadata = LatchMetadata(
 @workflow(metadata)
 def compare_workflow(
     project_name: str,
-    groupings: Union[Groupings, Barcodes, LatchFile],
+    groupings: Annotated[
+        Union[Groupings, Barcodes, LatchFile],
+        FlyteAnnotation({
+            "union_variant_names": ["Manual", "Barcodes", "File"]
+            })
+    ],
     archrproject: LatchDir,
     genome: Genome,
 ) -> LatchDir:
@@ -170,9 +176,11 @@ LaunchPlan(
         "groupings": Groupings(
             clusterA="C1-C3",
             conditionA="WT",
+            sampleA="",
             multipleA=False,
             clusterB="C4,C6,C7",
             conditionB="Lupus",
+            sampleB="",
             multipleB=False
         ),
         "archrproject": LatchDir(

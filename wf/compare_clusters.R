@@ -23,12 +23,39 @@ get_cfg_path <- function(args) {
   if (length(i) == 1 && (i + 1) <= length(args)) args[i + 1] else NULL
 }
 
-multiple_conditions <- function(archrConditions, user) {
-  # From a list of conditions, returns all containing string user.
+subset_by <- function(
+  df,
+  condition = NULL,
+  cluster = NULL,
+  sample = NULL,
+  col_condition = "Condition",
+  col_cluster = "Clusters",
+  col_sample  = "Sample"
+) {
+  # Helper that returns indices matching (optional) filters
+
+  # Build per-field tests; empty vectors mean "no filter" -> all TRUE
+  cond_ok  <- if (length(condition)) df[[col_condition]] %in% condition else TRUE
+  clust_ok <- if (length(cluster))   df[[col_cluster]]   %in% cluster   else TRUE
+  samp_ok  <- if (length(sample))    df[[col_sample]]    %in% sample    else TRUE
+
+  # Guard against NAs: treat NA as non-matching (FALSE)
+  to_bool <- function(x) if (is.logical(x) && length(x) > 1) `ifelse`(is.na(x), FALSE, x) else x
+  cond_ok  <- to_bool(cond_ok)
+  clust_ok <- to_bool(clust_ok)
+  samp_ok  <- to_bool(samp_ok)
+
+  which(cond_ok & clust_ok & samp_ok)
+}
+
+multiple_conditions <- function(archrConditions, string) {
+  #' From a list of conditions, returns all containing 'string'.  To be used
+  #' for conditions such as 'ConditionA_ConditionB', where string is
+  #' 'ConditionB'.
 
   match_cond <- c()
-  user_lowercase <- tolower(user)
-  pattern <- paste0("\\b", user_lowercase, "\\b")
+  string_lowercase <- tolower(string)
+  pattern <- paste0("\\b", string_lowercase, "\\b")
   for (sample in archrConditions) {
     lowercase <- tolower(sample)
     result <- grepl(pattern, lowercase)
@@ -57,9 +84,11 @@ if (!is.null(cfg_path)) {
   if (identical(mode, "groupings")) {
     clusterA   <- cfg$groupings$clusterA
     conditionA <- cfg$groupings$conditionA
+    sampleA    <- cfg$groupings$sampleA
     multipleA  <- cfg$groupings$multipleA
     clusterB   <- cfg$groupings$clusterB
     conditionB <- cfg$groupings$conditionB
+    sampleB    <- cfg$groupings$sampleB
     multipleB  <- cfg$groupings$multipleB
 
   } else if (identical(mode, "barcodes")) {
@@ -102,40 +131,23 @@ if (mode == "groupings") {
   conditionA_list <- unlist(strsplit(conditionA, ","))
   conditionB_list <- unlist(strsplit(conditionB, ","))
 
-  # Get index for Group A
-  if (length(conditionA_list) > 0 && length(clusterA_list) > 0) {
-    subsetA <- which(
-      proj_filter$Condition %in% conditionA_list &
-      proj_filter$Clusters %in% clusterA_list,
-    )
+  sampleA_list <- unlist(strsplit(sampleA, ","))
+  sampleB_list <- unlist(strsplit(sampleB, ","))  
 
-  } else if (length(conditionA_list) == 0 && length(clusterA_list) > 0) {
-    subsetA <- which(proj_filter$Clusters %in% clusterA_list)
+  subsetA <- subset_by(
+    proj_filter,
+    condition = conditionA_list,
+    cluster = clusterA_list,
+    sample = sampleA_list
+  )
 
-  } else if (length(conditionA_list) > 0 && length(clusterA_list) == 0) {
-    subsetA <- which(proj_filter$Condition %in% conditionA_list)
+  subsetB <- subset_by(
+    proj_filter,
+    condition = conditionB_list,
+    cluster = clusterB_list,
+    sample = sampleB_list
+  )
 
-  } else {
-    all_indexes <- length(proj_filter$Clusters)
-    subsetA <- 1:all_indexes
-  }
-
-  # Get index for Group B
-  if (length(conditionB_list) > 0 && length(clusterB_list) > 0) {
-    subsetB <- which(
-      proj_filter$Condition %in% conditionB_list &
-      proj_filter$Clusters %in% clusterB_list,
-    )
-  } else if (length(conditionB_list) == 0 && length(clusterB_list) > 0) {
-    subsetB <- which(proj_filter$Clusters %in% clusterB_list)
-
-  } else if (length(conditionB_list) > 0 && length(clusterB_list) == 0) {
-    subsetB <- which(proj_filter$Condition %in% conditionB_list)
-
-  } else {
-    all_indexes <- length(proj_filter$Clusters)
-    subsetB <- 1:all_indexes
-  }
 } else if (mode == "barcodes") {
 
   barcodesA_list <- unlist(strsplit(groupA, ","))

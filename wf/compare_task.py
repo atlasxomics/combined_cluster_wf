@@ -27,9 +27,11 @@ class Barcodes:
 class Groupings:
     clusterA: str
     conditionA: str
+    sampleA: str
     multipleA: bool
     clusterB: str
     conditionB: str
+    sampleB: str
     multipleB: bool
 
 
@@ -119,9 +121,11 @@ def compare_task(
             "groupings": {
                 "clusterA": expand_string(groupings.clusterA),
                 "conditionA": strip_string(groupings.conditionA),
+                "sampleA": strip_string(groupings.sampleA),
                 "multipleA": resolve_bool(groupings.multipleA),
                 "clusterB": expand_string(groupings.clusterB),
                 "conditionB": strip_string(groupings.conditionB),
+                "sampleB": strip_string(groupings.sampleB),
                 "multipleB": resolve_bool(groupings.multipleB),
             },
             "barcodes": None,
