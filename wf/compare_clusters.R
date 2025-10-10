@@ -24,27 +24,63 @@ get_cfg_path <- function(args) {
 }
 
 subset_by <- function(
-  df,
+  ArchRProj,
   condition = NULL,
-  cluster = NULL,
-  sample = NULL,
+  cluster   = NULL,
+  sample    = NULL,
   col_condition = "Condition",
-  col_cluster = "Clusters",
-  col_sample  = "Sample"
+  col_cluster   = "Clusters",
+  col_sample    = "Sample"
 ) {
-  # Helper that returns indices matching (optional) filters
+  # --- Extract metadata ---
+  meta <- ArchR::getCellColData(ArchRProj)
 
-  # Build per-field tests; empty vectors mean "no filter" -> all TRUE
-  cond_ok  <- if (length(condition)) df[[col_condition]] %in% condition else TRUE
-  clust_ok <- if (length(cluster))   df[[col_cluster]]   %in% cluster   else TRUE
-  samp_ok  <- if (length(sample))    df[[col_sample]]    %in% sample    else TRUE
+  # --- Check that required columns exist ---
+  for (col in c(col_condition, col_cluster, col_sample)) {
+    if (!col %in% colnames(meta)) {
+      stop(sprintf("Column '%s' not found in ArchRProject$cellColData.", col), call. = FALSE)
+    }
+  }
 
-  # Guard against NAs: treat NA as non-matching (FALSE)
-  to_bool <- function(x) if (is.logical(x) && length(x) > 1) `ifelse`(is.na(x), FALSE, x) else x
-  cond_ok  <- to_bool(cond_ok)
-  clust_ok <- to_bool(clust_ok)
-  samp_ok  <- to_bool(samp_ok)
+  # --- Trim whitespace and coerce to character for comparison ---
+  meta[[col_condition]] <- trimws(as.character(meta[[col_condition]]))
+  meta[[col_cluster]]   <- trimws(as.character(meta[[col_cluster]]))
+  meta[[col_sample]]    <- trimws(as.character(meta[[col_sample]]))
 
+  # --- Helper to check membership of each filter set ---
+  check_values <- function(values, col_name, col_data) {
+    if (length(values) > 0) {
+      missing_vals <- setdiff(values, unique(col_data))
+      if (length(missing_vals) > 0) {
+        stop(
+          sprintf(
+            "The following values for '%s' were not found in 
+            ArchRProject$cellColData$%s: %s\nCheck for typos, capitalization,
+            or whitespace mismatches.",
+            col_name, col_name, paste(missing_vals, collapse = ", ")
+          ),
+          call. = FALSE
+        )
+      }
+    }
+  }
+
+  # --- Validate provided filter values against metadata ---
+  check_values(condition, col_condition, meta[[col_condition]])
+  check_values(cluster,   col_cluster,   meta[[col_cluster]])
+  check_values(sample,    col_sample,    meta[[col_sample]])
+
+  # --- Build boolean masks ---
+  cond_ok  <- if (length(condition) > 0) meta[[col_condition]] %in% condition else TRUE
+  clust_ok <- if (length(cluster)   > 0) meta[[col_cluster]]   %in% cluster   else TRUE
+  samp_ok  <- if (length(sample)    > 0) meta[[col_sample]]    %in% sample    else TRUE
+
+  # --- Combine all filters (NA-safe) ---
+  cond_ok[is.na(cond_ok)]   <- FALSE
+  clust_ok[is.na(clust_ok)] <- FALSE
+  samp_ok[is.na(samp_ok)]   <- FALSE
+
+  # --- Return matching cell indices ---
   which(cond_ok & clust_ok & samp_ok)
 }
 
@@ -153,9 +189,6 @@ if (mode == "groupings") {
   barcodesA_list <- unlist(strsplit(groupA, ","))
   barcodesB_list <- unlist(strsplit(groupB, ","))
 
-  conditionA <- "GroupA"
-  conditionB <- "GroupB"
-
   subsetA <- which(row.names(proj_filter@cellColData) %in% barcodesA_list)
   subsetB <- which(row.names(proj_filter@cellColData) %in% barcodesB_list)
 }
@@ -165,8 +198,8 @@ vector_value <- sapply(
   (1 : nrow(proj_filter@cellColData)),
   function(x) ifelse(
     x %in% subsetA,
-    conditionA,
-    ifelse(x %in% subsetB, conditionB, "NO")
+    "GroupA",
+    ifelse(x %in% subsetB, "GroupB", "NO")
   )
 )
 proj_filter$UpdateClustName <- vector_value
@@ -174,6 +207,7 @@ proj_filter$UpdateClustName <- vector_value
 # Filter project to only Cells in groups subsets
 store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
+print(project_select)
 
 ### Calculate differential genes
 select_genes <- getMarkerFeatures(
@@ -250,7 +284,7 @@ marker_test <- getMarkerFeatures(
 
 pma <- plotMarkers(
   seMarker = marker_test,
-  name = conditionA,
+  name = "GroupA",
   cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
   plotAs = "MA"
 )

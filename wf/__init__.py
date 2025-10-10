@@ -72,7 +72,7 @@ def compare_workflow(
         Union[Groupings, Barcodes, LatchFile],
         FlyteAnnotation({
             "union_variant_names": ["Manual", "Barcodes", "File"]
-            })
+        })
     ],
     archrproject: LatchDir,
     genome: Genome,
