@@ -113,18 +113,39 @@ def compare_workflow(
     * ArchRProject: A file path on the latch.bio file system pointing to a
     directory generated via [ArchR::saveArchRProject()](https://www.archrproject.com/reference/saveArchRProject.html)
     * genome: A reference genome for the ArchRProject
-    * Specifications of groupings: Cluster and condition labels defining the
-    subsets of cells to be compared.
-        * ClusterA: Cluster specifications for first subset of cells.
-        * ConditionA: Condition specifications for first subset of cells.
-        * MultipleA: If an ArchRProject contains multiple conditions, returns
-        all cells associated with CondationA (see below).
-        * ClusterB: Cluster specifications for second subset of cells.
-        * ConditionB: Condition specifications for first subset of cells.
-        * MultipleB: If an ArchRProject contains multiple conditions, returns
-        all cells associated with CondationB (see below).
+    * Specifications of groupings:
+        * **Manual**: Cluster, condition, and sample labels defining the
+        groups of cells to be compared.
+            * ClusterA: Cluster name(s) for first group of cells.
+            * ConditionA: Condition name(s) for first group of cells.
+            * SampleA: Sample name(s) for the first group of cells.
+            * MultipleA: If an ArchRProject contains multiple conditions,
+            returns all cells associated with CondationA (see below).
+            * ClusterB: Cluster name(s) for second group of cells.
+            * ConditionB: Condition names(s) for second group of cells.
+            * SampleB: Sample name(s) for the second group of cells.
+            * MultipleB: If an ArchRProject contains multiple conditions,
+            returns all cells associated with CondationB (see below).
+        * **Barcodes**: Comma-separated lists of barcodes (i.e.,
+        'D00000#AAAAAAAAAAAAAAAA-1,D00000#TTTTTTTTAAAAAAAA-1...')
+        * **File**: JSON file saved in Latch Data specifying barcodes for
+        each group:
+            ```
+            {
+                "groupA": [
+                "D00000#GCAAGAAGGTCGTAGA-1",
+                "D00000#ACTAGGTCGTGTTCTA-1",
+                "D00000#TCCATTGGACACGACC-1",
+                ],
+                "groupB": [
+                "D00001#ATCGCAGTGTGTTCTA-1",
+                "D00001#TCACTGCATAGGATGA-1",
+                "D00001#TCACTGCAAGCACCTC-1",
+                ]
+            }
+            ```
 
-    #### Rules for groupings
+    #### Rules for  **manual**  groupings
     * Clusters can be specified as a common separated list (C2,C3,C5), a range
     (C2-C4), or a combination of the two (C2-C4,C6).
     * The Condition **must** match that provided when generating the
