@@ -222,6 +222,13 @@ select_genes <- getMarkerFeatures(
 sample_gene_list <- getMarkers(
   select_genes, cutOff = "FDR <= 1 & Log2FC >= -Inf"
 )
+pvals <- assay(select_genes, "Pval")
+for (i in seq_along(sample_gene_list)) {
+  sample_gene_list[[i]]$Pval <- pvals[
+    match(sample_gene_list[[i]]$name, rowData(select_genes)$name), i
+  ]
+}
+
 write.csv(
   sample_gene_list,
   file = file.path(gene_dir, "all_genes.csv"),
@@ -385,6 +392,14 @@ markers_motifs <- getMarkerFeatures(
 motifs_list <- getMarkers(
   markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf"
 )
+
+pvals <- assay(markers_motifs, "Pval")
+for (i in seq_along(motifs_list)) {
+  motifs_list[[i]]$Pval <- pvals[
+    match(motifs_list[[i]]$name, rowData(markers_motifs)$name), i
+  ]
+}
+
 write.csv(
   motifs_list,
   file = file.path(motif_dir, "all_motifs.csv"),
