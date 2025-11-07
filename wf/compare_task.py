@@ -193,9 +193,7 @@ def compare_task(
     logging.info("Rscript complete; uploading results.")
 
     # Get rid of unnecessary files
-    subprocess.run(
-        ["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"], check=True
-    )
+    subprocess.run(["rm", "-r", f"{out_dir}Rplots.pdf", f"{out_dir}ArchRLogs"])
 
     return LatchDir(out_dir, remote_dir)
 
