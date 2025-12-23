@@ -415,7 +415,7 @@ pairwise_dfm <- data.frame(pairwise_motifs, mmean, mpvalue, mFDR)
 pairwise_dfm$Significance <- ifelse(
   pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
   ifelse(
-    pairwise_df$mpvalue > 0,
+    pairwise_dfm$mpvalue > 0,
     colnames(assay(markers_motifs))[1],
     colnames(assay(markers_motifs))[2]
   ),
