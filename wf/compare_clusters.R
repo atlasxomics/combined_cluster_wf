@@ -138,8 +138,6 @@ if (!is.null(cfg_path)) {
   stop("Missing --config argument. (Legacy positional args disabled in this run.)")
 }
 
-addArchRGenome(genome)
-
 setwd(work_dir)
 
 gene_dir <- file.path(work_dir, "gene_results")
