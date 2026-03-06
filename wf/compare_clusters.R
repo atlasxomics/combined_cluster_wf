@@ -215,7 +215,8 @@ select_genes <- getMarkerFeatures(
   groupBy = "UpdateClustName",
   useMatrix = "GeneScoreMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "ttest"
+  testMethod = "ttest",
+  closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
 # Save stats for all genes
@@ -286,7 +287,8 @@ marker_test <- getMarkerFeatures(
   groupBy = "UpdateClustName",
   useMatrix = "PeakMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon"
+  testMethod = "wilcoxon",
+  closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
 pma <- plotMarkers(
@@ -385,7 +387,8 @@ markers_motifs <- getMarkerFeatures(
   testMethod = "wilcoxon",
   useSeqnames = "z",
   maxCells = 5000,
-  normBy = "none"
+  normBy = "none",
+  closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
 # Save stats for all genes
