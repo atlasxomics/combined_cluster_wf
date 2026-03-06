@@ -3,7 +3,7 @@
 from typing import Annotated, Union
 from flytekit.core.annotation import FlyteAnnotation
 
-from wf.compare_task import compare_task, Barcodes, Groupings, Genome
+from wf.compare_task import compare_task, Barcodes, Groupings
 
 from latch.resources.workflow import workflow
 from latch.resources.launch_plan import LaunchPlan
@@ -55,11 +55,6 @@ metadata = LatchMetadata(
                         the two cell groupings to be compared.",
             batch_table_column=True
         ),
-        'genome': LatchParameter(
-            display_name='genome',
-            description='Reference genome',
-            batch_table_column=True,
-        ),
     },
     tags=[],
 )
@@ -75,7 +70,6 @@ def compare_workflow(
         })
     ],
     archrproject: LatchDir,
-    genome: Genome,
 ) -> LatchDir:
 
     '''Explore differences in genes, peaks, and motifs within an ArchRProject.
@@ -112,7 +106,6 @@ def compare_workflow(
     * project name: A name for the output folder
     * ArchRProject: A file path on the latch.bio file system pointing to a
     directory generated via [ArchR::saveArchRProject()](https://www.archrproject.com/reference/saveArchRProject.html)
-    * genome: A reference genome for the ArchRProject
     * Specifications of groupings:
         * **Manual**: Cluster, condition, and sample labels defining the
         groups of cells to be compared.
@@ -145,7 +138,7 @@ def compare_workflow(
             }
             ```
 
-    #### Rules for  **manual**  groupings
+    #### Rules for  manual  groupings
     * Clusters can be specified as a common separated list (C2,C3,C5), a range
     (C2-C4), or a combination of the two (C2-C4,C6).
     * The Condition **must** match that provided when generating the
@@ -185,7 +178,6 @@ def compare_workflow(
         project_name=project_name,
         groupings=groupings,
         archrproject=archrproject,
-        genome=genome,
     )
 
 
@@ -207,6 +199,5 @@ LaunchPlan(
         "archrproject": LatchDir(
             "s3://latch-public/test-data/13502/compare_ArchRProject",
         ),
-        "genome": Genome.mm10,
     },
 )

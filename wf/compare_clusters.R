@@ -1,7 +1,5 @@
 library(ArchR)
 library(BiocManager)
-library(BSgenome.Hsapiens.UCSC.hg38)
-library(BSgenome.Mmusculus.UCSC.mm10)
 library(dplyr)
 library(EnhancedVolcano)
 library(ggrepel)
@@ -114,7 +112,6 @@ if (!is.null(cfg_path)) {
   project_name   <- cfg$project_name
   mode           <- cfg$mode
   archr_path     <- cfg$archr_path
-  genome         <- cfg$genome
   work_dir       <- cfg$out_dir
 
   if (identical(mode, "groupings")) {
@@ -137,8 +134,6 @@ if (!is.null(cfg_path)) {
 } else {
   stop("Missing --config argument. (Legacy positional args disabled in this run.)")
 }
-
-addArchRGenome(genome)
 
 setwd(work_dir)
 
