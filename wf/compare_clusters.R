@@ -209,6 +209,42 @@ store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
 print(project_select)
 
+# Maximize cells used for pairwise marker comparisons.
+pair_labels <- trimws(as.character(
+  getCellColData(project_select, "UpdateClustName", drop = TRUE)
+))
+pair_counts <- table(pair_labels)
+
+if (!all(c("GroupA", "GroupB") %in% names(pair_counts))) {
+  stop(
+    "Both GroupA and GroupB must contain at least one cell after filtering.",
+    call. = FALSE
+  )
+}
+
+n_groupA <- as.integer(pair_counts[["GroupA"]])
+n_groupB <- as.integer(pair_counts[["GroupB"]])
+
+pair_max_cells <- as.integer(min(n_groupA, n_groupB))
+pair_buffer_ratio <- 1.0
+
+# Larger k gives matching more options; ArchR auto-caps k if needed.
+pair_k <- as.integer(min(500L, max(n_groupA, n_groupB)))
+
+message(
+  sprintf(
+    paste0(
+      "Marker matching params: GroupA=%d, GroupB=%d, ",
+      "maxCells=%d, bufferRatio=%.1f, k=%d"
+    ),
+    n_groupA,
+    n_groupB,
+    pair_max_cells,
+    pair_buffer_ratio,
+    pair_k
+  )
+)
+
 ### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
@@ -216,6 +252,9 @@ select_genes <- getMarkerFeatures(
   useMatrix = "GeneScoreMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "ttest",
+  maxCells = pair_max_cells,
+  bufferRatio = pair_buffer_ratio,
+  k = pair_k,
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
@@ -287,6 +326,10 @@ marker_test <- getMarkerFeatures(
   groupBy = "UpdateClustName",
   useMatrix = "PeakMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
+  testMethod = "wilcoxon",
+  maxCells = pair_max_cells,
+  bufferRatio = pair_buffer_ratio,
+  k = pair_k
   testMethod = "wilcoxon",
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
@@ -386,6 +429,10 @@ markers_motifs <- getMarkerFeatures(
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
+  maxCells = pair_max_cells,
+  bufferRatio = pair_buffer_ratio,
+  k = pair_k,
+  normBy = "none"
   maxCells = 5000,
   normBy = "none",
   closest = TRUE  # Ensure recipricol comparisons the same.
