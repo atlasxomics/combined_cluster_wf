@@ -326,10 +326,9 @@ marker_test <- getMarkerFeatures(
   groupBy = "UpdateClustName",
   useMatrix = "PeakMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon",
   maxCells = pair_max_cells,
   bufferRatio = pair_buffer_ratio,
-  k = pair_k
+  k = pair_k,
   testMethod = "wilcoxon",
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
@@ -432,8 +431,6 @@ markers_motifs <- getMarkerFeatures(
   maxCells = pair_max_cells,
   bufferRatio = pair_buffer_ratio,
   k = pair_k,
-  normBy = "none"
-  maxCells = 5000,
   normBy = "none",
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
