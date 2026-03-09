@@ -21,7 +21,6 @@
  * project name: A name for the output folder
  * ArchRProject: A file path on the latch.bio file system pointing to a
  directory generated via [ArchR::saveArchRProject()](https://www.archrproject.com/reference/saveArchRProject.html)
- * genome: A reference genome for the ArchRProject
  * Specifications of groupings: Cluster and condition labels defining the
  subsets of cells to be compared.
      * ClusterA: Cluster specifications for first subset of cells.
