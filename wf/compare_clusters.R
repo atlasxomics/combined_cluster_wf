@@ -110,6 +110,8 @@ if (!is.null(cfg_path)) {
   cfg <- jsonlite::fromJSON(cfg_path)
 
   project_name   <- cfg$project_name
+  max_cells      <- as.integer(cfg$max_cells)
+  use_max_possible_cells <- isTRUE(cfg$use_max_possible_cells)
   mode           <- cfg$mode
   archr_path     <- cfg$archr_path
   work_dir       <- cfg$out_dir
@@ -133,6 +135,10 @@ if (!is.null(cfg_path)) {
   }
 } else {
   stop("Missing --config argument. (Legacy positional args disabled in this run.)")
+}
+
+if (is.na(max_cells) || max_cells < 1) {
+  stop("Config field 'max_cells' must be a positive integer.", call. = FALSE)
 }
 
 setwd(work_dir)
@@ -204,6 +210,36 @@ store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
 print(project_select)
 
+group_sizes <- table(as.character(project_select$UpdateClustName))
+groupA_n <- if ("GroupA" %in% names(group_sizes)) as.integer(group_sizes[["GroupA"]]) else 0L
+groupB_n <- if ("GroupB" %in% names(group_sizes)) as.integer(group_sizes[["GroupB"]]) else 0L
+
+if (groupA_n < 1 || groupB_n < 1) {
+  stop("Both GroupA and GroupB must contain at least one selected cell.", call. = FALSE)
+}
+
+if (use_max_possible_cells) {
+  marker_max_cells <- as.integer(min(groupA_n, groupB_n))
+  message(
+    sprintf(
+      "Using maximum possible cells: GroupA=%d, GroupB=%d, maxCells=%d",
+      groupA_n,
+      groupB_n,
+      marker_max_cells
+    )
+  )
+} else {
+  marker_max_cells <- max_cells
+  message(
+    sprintf(
+      "Using configured max_cells cap: GroupA=%d, GroupB=%d, maxCells=%d",
+      groupA_n,
+      groupB_n,
+      marker_max_cells
+    )
+  )
+}
+
 ### Calculate differential genes
 select_genes <- getMarkerFeatures(
   ArchRProj = project_select,
@@ -211,6 +247,7 @@ select_genes <- getMarkerFeatures(
   useMatrix = "GeneScoreMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "ttest",
+  maxCells = marker_max_cells,
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
@@ -283,6 +320,7 @@ marker_test <- getMarkerFeatures(
   useMatrix = "PeakMatrix",
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
+  maxCells = marker_max_cells,
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
 
@@ -381,7 +419,7 @@ markers_motifs <- getMarkerFeatures(
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   useSeqnames = "z",
-  maxCells = 5000,
+  maxCells = marker_max_cells,
   normBy = "none",
   closest = TRUE  # Ensure recipricol comparisons the same.
 )
