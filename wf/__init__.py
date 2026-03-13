@@ -49,6 +49,18 @@ metadata = LatchMetadata(
                         Save-ArchR-Project.rds file.",
             batch_table_column=True
         ),
+        "max_cells": LatchParameter(
+            display_name="max cells per comparison group",
+            description="Upper bound on the number of cells passed to "
+                        "ArchR::getMarkerFeatures for each group.",
+            batch_table_column=True
+        ),
+        "use_max_possible_cells": LatchParameter(
+            display_name="use maximum possible cells",
+            description="Ignore the explicit cap and use the largest "
+                        "possible matched group size for the comparison.",
+            batch_table_column=True
+        ),
         "groupings": LatchParameter(
             display_name="Specifications of groupings",
             description="Cluster, condition, and sample specifications for \
@@ -70,6 +82,8 @@ def compare_workflow(
         })
     ],
     archrproject: LatchDir,
+    use_max_possible_cells: bool,
+    max_cells: int = 500,
 ) -> LatchDir:
 
     '''Explore differences in genes, peaks, and motifs within an ArchRProject.
@@ -106,6 +120,10 @@ def compare_workflow(
     * project name: A name for the output folder
     * ArchRProject: A file path on the latch.bio file system pointing to a
     directory generated via [ArchR::saveArchRProject()](https://www.archrproject.com/reference/saveArchRProject.html)
+    * max cells: Upper bound on the number of cells used per group in
+    ArchR::getMarkerFeatures comparisons.
+    * use maximum possible cells: If true, use the largest possible matched
+    group size from the selected cells and ignore the explicit cap.
     * Specifications of groupings:
         * **Manual**: Cluster, condition, and sample labels defining the
         groups of cells to be compared.
@@ -176,6 +194,8 @@ def compare_workflow(
 
     return compare_task(
         project_name=project_name,
+        max_cells=max_cells,
+        use_max_possible_cells=use_max_possible_cells,
         groupings=groupings,
         archrproject=archrproject,
     )
@@ -186,6 +206,8 @@ LaunchPlan(
     "default",
     {
         "project_name": "default",
+        "max_cells": 500,
+        "use_max_possible_cells": False,
         "groupings": Groupings(
             clusterA="C1-C3",
             conditionA="WT",
