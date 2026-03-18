@@ -210,6 +210,18 @@ store_subsets <- sort(unique(c(subsetA, subsetB)))
 project_select <- proj_filter[store_subsets]
 print(project_select)
 
+cell_group_mapping <- data.frame(
+  cell_barcode = rownames(project_select@cellColData),
+  UpdateClustName = as.character(project_select$UpdateClustName),
+  stringsAsFactors = FALSE
+)
+
+write.csv(
+  cell_group_mapping,
+  file = file.path(work_dir, "UpdateClustName_by_barcode.csv"),
+  row.names = FALSE
+)
+
 group_sizes <- table(as.character(project_select$UpdateClustName))
 groupA_n <- if ("GroupA" %in% names(group_sizes)) as.integer(group_sizes[["GroupA"]]) else 0L
 groupB_n <- if ("GroupB" %in% names(group_sizes)) as.integer(group_sizes[["GroupB"]]) else 0L
@@ -501,9 +513,3 @@ file_names <- getGroupBW(
 for (file_name in file_names) {
   file.copy(from = file_name, to = coverage_dir)
 }
-
-saveArchRProject(
-  ArchRProj = project_select,
-  outputDirectory = paste0(project_name, "_ArchRProject"),
-  dropCells = TRUE
-)

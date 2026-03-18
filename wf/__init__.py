@@ -94,6 +94,8 @@ def compare_workflow(
     comparing differences in genes, peaks, and motifs between user-defined
     cluster/condition groupings within an ArchRProject.  Provided an
     ArchRProject and grouping specifications, **compare clusters** generates,
+    * `UpdateClustName_by_barcode.csv`: selected cell barcodes and their
+    assigned `UpdateClustName` values (`GroupA` or `GroupB`).
     * for genes
         * volcano plot
         * all_genes.csv: all genes with test results from ArchR::getMarkerFeatures
@@ -118,8 +120,8 @@ def compare_workflow(
     [file system](https://wiki.latch.bio/wiki/data/overview). Each run in the
     workflow takes the following parameters,
     * project name: A name for the output folder
-    * ArchRProject: A file path on the latch.bio file system pointing to a
-    directory generated via [ArchR::saveArchRProject()](https://www.archrproject.com/reference/saveArchRProject.html)
+    * ArchRProject: A file path on the latch.bio file system pointing to an
+    ArchR project directory containing a `Save-ArchR-Project.rds` file.
     * max cells: Upper bound on the number of cells used per group in
     ArchR::getMarkerFeatures comparisons.
     * use maximum possible cells: If true, use the largest possible matched
