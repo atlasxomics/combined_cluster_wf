@@ -15,6 +15,29 @@ from latch.types import (
     LatchParameter,
     LatchRule,
 )
+from latch.types.metadata import Fork, ForkBranch, Params, Spoiler, Text
+
+
+flow = [
+    Params("project_name"),
+    Params("archrproject"),
+    Spoiler(
+        "Specify Sample Size",
+        Text(
+            "Larger sample sizes will take longer "
+            "to run; default 500 cells."
+        ),
+        Fork(
+            "Specify sample size",
+            "Specify sample size",
+            max_cells=ForkBranch("Number of cells", Params("max_cells")),
+            use_max_possible_cells=ForkBranch(
+                "Maximumize sample size", Params("use_max_possible_cells")
+            ),
+        ),
+    ),
+    Params("groupings"),
+]
 
 
 metadata = LatchMetadata(
@@ -69,6 +92,7 @@ metadata = LatchMetadata(
         ),
     },
     tags=[],
+    flow=flow
 )
 
 
