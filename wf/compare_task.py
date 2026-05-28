@@ -88,6 +88,7 @@ def compare_task(
     archrproject: LatchDir,
     use_max_possible_cells: bool,
     max_cells: int,
+    closest: bool,
 ) -> LatchDir:
 
     out_dir = f"/root/{project_name}/"
@@ -114,6 +115,7 @@ def compare_task(
             "project_name": project_name,
             "max_cells": max_cells,
             "use_max_possible_cells": use_max_possible_cells,
+            "closest": closest,
             "mode": mode,
             "groupings": {
                 "clusterA": expand_string(groupings.clusterA),
@@ -135,6 +137,7 @@ def compare_task(
             "project_name": project_name,
             "max_cells": max_cells,
             "use_max_possible_cells": use_max_possible_cells,
+            "closest": closest,
             "mode": mode,
             "groupings": None,
             "barcodes": {
@@ -154,6 +157,7 @@ def compare_task(
             "project_name": project_name,
             "max_cells": max_cells,
             "use_max_possible_cells": use_max_possible_cells,
+            "closest": closest,
             "mode": "barcodes",
             "groupings": None,
             "barcodes": {
@@ -207,4 +211,5 @@ if __name__ == "__main__":
         archrproject="latch://13502.account/ArchRProjects/Gaykalova/Gaykalova_ArchRProject",
         max_cells=500,
         use_max_possible_cells=False,
+        closest=True,
     )

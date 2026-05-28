@@ -35,6 +35,7 @@ flow = [
                 "Maximumize sample size", Params("use_max_possible_cells")
             ),
         ),
+        Params("closest"),
     ),
     Params("groupings"),
 ]
@@ -84,6 +85,13 @@ metadata = LatchMetadata(
                         "possible matched group size for the comparison.",
             batch_table_column=True
         ),
+        "closest": LatchParameter(
+            display_name="closest",
+            description="Ensure pairwise comparison results are reciprocal by"
+            " closest cells from foreground and background instead of random "
+            "sampling'.",
+            batch_table_column=True
+        ),
         "groupings": LatchParameter(
             display_name="Specifications of groupings",
             description="Cluster, condition, and sample specifications for \
@@ -108,6 +116,7 @@ def compare_workflow(
     archrproject: LatchDir,
     use_max_possible_cells: bool,
     max_cells: int = 500,
+    closest: bool = True,
 ) -> LatchDir:
 
     '''Explore differences in genes, peaks, and motifs within an ArchRProject.
@@ -150,6 +159,7 @@ def compare_workflow(
     ArchR::getMarkerFeatures comparisons.
     * use maximum possible cells: If true, use the largest possible matched
     group size from the selected cells and ignore the explicit cap.
+    * closest: Passed to ArchR::getMarkerFeatures. Defaults to true.
     * Specifications of groupings:
         * **Manual**: Cluster, condition, and sample labels defining the
         groups of cells to be compared.
@@ -222,6 +232,7 @@ def compare_workflow(
         project_name=project_name,
         max_cells=max_cells,
         use_max_possible_cells=use_max_possible_cells,
+        closest=closest,
         groupings=groupings,
         archrproject=archrproject,
     )
@@ -234,6 +245,7 @@ LaunchPlan(
         "project_name": "default",
         "max_cells": 500,
         "use_max_possible_cells": False,
+        "closest": True,
         "groupings": Groupings(
             clusterA="C1-C3",
             conditionA="WT",

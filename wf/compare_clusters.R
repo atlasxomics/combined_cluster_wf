@@ -112,6 +112,7 @@ if (!is.null(cfg_path)) {
   project_name   <- cfg$project_name
   max_cells      <- as.integer(cfg$max_cells)
   use_max_possible_cells <- isTRUE(cfg$use_max_possible_cells)
+  closest        <- if (is.null(cfg$closest)) TRUE else isTRUE(cfg$closest)
   mode           <- cfg$mode
   archr_path     <- cfg$archr_path
   work_dir       <- cfg$out_dir
@@ -260,7 +261,7 @@ select_genes <- getMarkerFeatures(
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "ttest",
   maxCells = marker_max_cells,
-  closest = TRUE  # Ensure recipricol comparisons the same.
+  closest = closest
 )
 
 # Save stats for all genes
@@ -333,7 +334,7 @@ marker_test <- getMarkerFeatures(
   bias = c("TSSEnrichment", "log10(nFrags)"),
   testMethod = "wilcoxon",
   maxCells = marker_max_cells,
-  closest = TRUE  # Ensure recipricol comparisons the same.
+  closest = closest
 )
 
 pma <- plotMarkers(
@@ -433,7 +434,7 @@ markers_motifs <- getMarkerFeatures(
   useSeqnames = "z",
   maxCells = marker_max_cells,
   normBy = "none",
-  closest = TRUE  # Ensure recipricol comparisons the same.
+  closest = closest
 )
 
 # Save stats for all genes
