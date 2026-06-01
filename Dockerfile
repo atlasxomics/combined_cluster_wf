@@ -72,6 +72,8 @@ RUN R -e "renv::restore()"
 RUN python3 -m pip install numpy
 # RUN python3 -m pip install macs2==2.2.6
 
+RUN R -e "remotes::install_github('jpmcga/ArchR', ref = 'f56aef1')"
+
 # STOP HERE:
 # The following lines are needed to ensure your build environement works
 # correctly with latch.
