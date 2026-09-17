@@ -16,6 +16,24 @@ library(SeuratObject)
 library(stringr)
 library(tibble)
 
+# Keep independent analyses running when an optional matrix is unavailable.
+run_optional_analysis <- function(label, expr) {
+  open_devices <- dev.list()
+  tryCatch(
+    expr,
+    error = function(e) {
+      msg <- sprintf("%s failed; skipping remaining steps: %s", label, conditionMessage(e))
+      message(msg)
+      cat(msg, "\n", file = file.path(work_dir, "analysis_errors.log"), append = TRUE)
+      NULL
+    },
+    finally = {
+      # Close any plot device left open by a failed plotting step.
+      for (device in setdiff(dev.list(), open_devices)) dev.off(device)
+    }
+  )
+}
+
 get_cfg_path <- function(args) {
   i <- which(args == "--config")
   if (length(i) == 1 && (i + 1) <= length(args)) args[i + 1] else NULL
@@ -327,177 +345,188 @@ dev.off()
 
 ############################# Compare Peaks ##################################
 
-marker_test <- getMarkerFeatures(
-  ArchRProj = project_select,
-  groupBy = "UpdateClustName",
-  useMatrix = "PeakMatrix",
-  bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon",
-  maxCells = marker_max_cells,
-  closest = closest
-)
+marker_test <- run_optional_analysis("Peak comparison", {
+  marker_test <- getMarkerFeatures(
+    ArchRProj = project_select,
+    groupBy = "UpdateClustName",
+    useMatrix = "PeakMatrix",
+    bias = c("TSSEnrichment", "log10(nFrags)"),
+    testMethod = "wilcoxon",
+    maxCells = marker_max_cells,
+    closest = closest
+  )
 
-pma <- plotMarkers(
-  seMarker = marker_test,
-  name = "GroupA",
-  cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
-  plotAs = "MA"
-)
-pdf(file.path(peak_dir, "MA_peaks.pdf"))
-print(pma)
-dev.off()
+  pma <- plotMarkers(
+    seMarker = marker_test,
+    name = "GroupA",
+    cutOff = "FDR <= 0.1 & abs(Log2FC) >= 0.4",
+    plotAs = "MA"
+  )
+  pdf(file.path(peak_dir, "MA_peaks.pdf"))
+  print(pma)
+  dev.off()
 
-marker_list <- getMarkers(marker_test, cutOff = "FDR <= 1 & Log2FC >= -Inf")
+  marker_list <- getMarkers(marker_test, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 
-# Add annotations
-peak_data <- data.frame(
-  project_select@peakSet@ranges, project_select@peakSet@elementMetadata
-)
-total <- merge(peak_data, marker_list, by = c("start", "end"))
+  # Add annotations
+  peak_data <- data.frame(
+    project_select@peakSet@ranges, project_select@peakSet@elementMetadata
+  )
+  total <- merge(peak_data, marker_list, by = c("start", "end"))
 
-write.csv(
-  total, file = file.path(peak_dir, "all_peaks.csv"), row.names = FALSE
-)
+  write.csv(
+    total, file = file.path(peak_dir, "all_peaks.csv"), row.names = FALSE
+  )
+  marker_test
+})
 
 ############################# Compare Motifs #################################
 
-motifs_up <- peakAnnoEnrichment(
-  seMarker = marker_test,
-  ArchRProj = project_select,
-  peakAnnotation = "Motif",
-  cutOff = "Pval <= 0.1 & Log2FC > 0"
-)
-df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
-df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
-df$rank <- seq_len(nrow(df))
+if (!is.null(marker_test)) {
+  run_optional_analysis("Peak motif enrichment", {
+    motifs_up <- peakAnnoEnrichment(
+      seMarker = marker_test,
+      ArchRProj = project_select,
+      peakAnnotation = "Motif",
+      cutOff = "Pval <= 0.1 & Log2FC > 0"
+    )
+    df <- data.frame(TF = rownames(motifs_up), mlog10Padj = assay(motifs_up)[, 1])
+    df <- df[order(df$mlog10Padj, decreasing = TRUE), ]
+    df$rank <- seq_len(nrow(df))
 
-write.csv(
-  df, file = file.path(motif_dir, "upRegulated_motifs.csv"), row.names = FALSE
-)
+    write.csv(
+      df, file = file.path(motif_dir, "upRegulated_motifs.csv"), row.names = FALSE
+    )
 
-gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
-  geom_point(size = 1) +
-  ggrepel::geom_label_repel(
-    data = df[rev(seq_len(30)), ],
-    aes(x = rank, y = mlog10Padj, label = TF),
-    size = 1.5,
-    nudge_x = 2,
-    color = "black"
-  ) +
-  theme_ArchR() +
-  ylab("-log10(P-adj) Motif Enrichment") +
-  xlab("Rank Sorted TFs Enriched") +
-  scale_color_gradientn(colors = paletteContinuous(set = "comet"))
+    gg_up <- ggplot(df, aes(rank, mlog10Padj, color = mlog10Padj)) +
+      geom_point(size = 1) +
+      ggrepel::geom_label_repel(
+        data = df[rev(seq_len(30)), ],
+        aes(x = rank, y = mlog10Padj, label = TF),
+        size = 1.5,
+        nudge_x = 2,
+        color = "black"
+      ) +
+      theme_ArchR() +
+      ylab("-log10(P-adj) Motif Enrichment") +
+      xlab("Rank Sorted TFs Enriched") +
+      scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(file.path(motif_dir, "upRegulated_motif_enrichment.pdf"))
-print(gg_up)
-dev.off()
+    pdf(file.path(motif_dir, "upRegulated_motif_enrichment.pdf"))
+    print(gg_up)
+    dev.off()
 
-motifs_do <- peakAnnoEnrichment(
-  seMarker = marker_test,
-  ArchRProj = project_select,
-  peakAnnotation = "Motif",
-  cutOff = "Pval <= 0.1 & Log2FC < 0"
-)
-df2 <- data.frame(TF = rownames(motifs_do), mlog10Padj = assay(motifs_do)[, 1])
-df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
-df2$rank <- seq_len(nrow(df2))
+    motifs_do <- peakAnnoEnrichment(
+      seMarker = marker_test,
+      ArchRProj = project_select,
+      peakAnnotation = "Motif",
+      cutOff = "Pval <= 0.1 & Log2FC < 0"
+    )
+    df2 <- data.frame(TF = rownames(motifs_do), mlog10Padj = assay(motifs_do)[, 1])
+    df2 <- df2[order(df2$mlog10Padj, decreasing = TRUE), ]
+    df2$rank <- seq_len(nrow(df2))
 
-write.csv(
-  df2, file = file.path(motif_dir, "downRegulated_motifs.csv"),
-  row.names = FALSE
-)
+    write.csv(
+      df2, file = file.path(motif_dir, "downRegulated_motifs.csv"),
+      row.names = FALSE
+    )
 
-gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
-  geom_point(size = 1) +
-  ggrepel::geom_label_repel(
-    data = df2[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF),
-    size = 1.5,
-    nudge_x = 2,
-    color = "black"
-  ) +
-  theme_ArchR() +
-  ylab("-log10(FDR) Motif Enrichment") +
-  xlab("Rank Sorted TFs Enriched") +
-  scale_color_gradientn(colors = paletteContinuous(set = "comet"))
+    gg_do <- ggplot(df2, aes(rank, mlog10Padj, color = mlog10Padj)) +
+      geom_point(size = 1) +
+      ggrepel::geom_label_repel(
+        data = df2[rev(seq_len(30)), ], aes(x = rank, y = mlog10Padj, label = TF),
+        size = 1.5,
+        nudge_x = 2,
+        color = "black"
+      ) +
+      theme_ArchR() +
+      ylab("-log10(FDR) Motif Enrichment") +
+      xlab("Rank Sorted TFs Enriched") +
+      scale_color_gradientn(colors = paletteContinuous(set = "comet"))
 
-pdf(file.path(motif_dir, "downRegulated_motif_enrichment.pdf"))
-print(gg_do)
-dev.off()
-
-markers_motifs <- getMarkerFeatures(
-  ArchRProj = project_select,
-  useMatrix = "MotifMatrix",
-  groupBy = "UpdateClustName",
-  bias = c("TSSEnrichment", "log10(nFrags)"),
-  testMethod = "wilcoxon",
-  useSeqnames = "z",
-  maxCells = marker_max_cells,
-  normBy = "none",
-  closest = closest
-)
-
-# Save stats for all genes
-motifs_list <- getMarkers(
-  markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf"
-)
-
-pvals <- assay(markers_motifs, "Pval")
-for (i in seq_along(motifs_list)) {
-  motifs_list[[i]]$Pval <- pvals[
-    match(motifs_list[[i]]$name, rowData(markers_motifs)$name), i
-  ]
+    pdf(file.path(motif_dir, "downRegulated_motif_enrichment.pdf"))
+    print(gg_do)
+    dev.off()
+  })
+} else {
+  message("Skipping peak motif enrichment because peak comparison failed.")
 }
 
-write.csv(
-  motifs_list,
-  file = file.path(motif_dir, "all_motifs.csv"),
-  row.names = FALSE
-)
+run_optional_analysis("Motif comparison", {
+  markers_motifs <- getMarkerFeatures(
+    ArchRProj = project_select,
+    useMatrix = "MotifMatrix",
+    groupBy = "UpdateClustName",
+    bias = c("TSSEnrichment", "log10(nFrags)"),
+    testMethod = "wilcoxon",
+    useSeqnames = "z",
+    maxCells = marker_max_cells,
+    normBy = "none",
+    closest = closest
+  )
 
-pairwise_motifs <- rowData(markers_motifs)$name
-mmean <- assay(markers_motifs, "MeanDiff")[, 1]
-mFDR <- assay(markers_motifs, "FDR")[, 1]
-mpvalue <- assay(markers_motifs, "Pval")[, 1]
-pairwise_dfm <- data.frame(pairwise_motifs, mmean, mpvalue, mFDR)
+  # Save stats for all genes
+  motifs_list <- getMarkers(
+    markers_motifs, cutOff = "FDR <= 1 & MeanDiff >= -Inf"
+  )
 
-pairwise_dfm$Significance <- ifelse(
-  pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
-  ifelse(
-    pairwise_dfm$mpvalue > 0,
-    colnames(assay(markers_motifs))[1],
-    colnames(assay(markers_motifs))[2]
-  ),
-  "Not significant")
-pairwise_dfm <- na.omit(pairwise_dfm)
-write.csv(
-  pairwise_dfm,
-  file = file.path(motif_dir, "marker_motifs.csv"),
-  row.names = FALSE
-)
+  pvals <- assay(markers_motifs, "Pval")
+  for (i in seq_along(motifs_list)) {
+    motifs_list[[i]]$Pval <- pvals[
+      match(motifs_list[[i]]$name, rowData(markers_motifs)$name), i
+    ]
+  }
 
-volcanom <- EnhancedVolcano(
-  pairwise_dfm,
-  lab = pairwise_dfm$pairwise_motifs,
-  x = "mmean",
-  y = "mpvalue",
-  ylim = c(0, abs(min(log10(pairwise_dfm$mpvalue)))),
-  xlim = c(-2.5, 2.5),
-  xlab = bquote("MeanDiff"),
-  title = paste0(
-    colnames(assay(markers_motifs))[1],
-    " vs ",
-    colnames(assay(markers_motifs))[2]
-  ),
-  pCutoff = 0.05,
-  FCcutoff = 0.4,
-  pointSize = 1.0,
-  labSize = 4.0
-)
+  write.csv(
+    motifs_list,
+    file = file.path(motif_dir, "all_motifs.csv"),
+    row.names = FALSE
+  )
 
-pdf(file.path(motif_dir, "volcano_motif.pdf"))
-print(volcanom)
-dev.off()
+  pairwise_motifs <- rowData(markers_motifs)$name
+  mmean <- assay(markers_motifs, "MeanDiff")[, 1]
+  mFDR <- assay(markers_motifs, "FDR")[, 1]
+  mpvalue <- assay(markers_motifs, "Pval")[, 1]
+  pairwise_dfm <- data.frame(pairwise_motifs, mmean, mpvalue, mFDR)
+
+  pairwise_dfm$Significance <- ifelse(
+    pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
+    ifelse(
+      pairwise_dfm$mpvalue > 0,
+      colnames(assay(markers_motifs))[1],
+      colnames(assay(markers_motifs))[2]
+    ),
+    "Not significant")
+  pairwise_dfm <- na.omit(pairwise_dfm)
+  write.csv(
+    pairwise_dfm,
+    file = file.path(motif_dir, "marker_motifs.csv"),
+    row.names = FALSE
+  )
+
+  volcanom <- EnhancedVolcano(
+    pairwise_dfm,
+    lab = pairwise_dfm$pairwise_motifs,
+    x = "mmean",
+    y = "mpvalue",
+    ylim = c(0, abs(min(log10(pairwise_dfm$mpvalue)))),
+    xlim = c(-2.5, 2.5),
+    xlab = bquote("MeanDiff"),
+    title = paste0(
+      colnames(assay(markers_motifs))[1],
+      " vs ",
+      colnames(assay(markers_motifs))[2]
+    ),
+    pCutoff = 0.05,
+    FCcutoff = 0.4,
+    pointSize = 1.0,
+    labSize = 4.0
+  )
+
+  pdf(file.path(motif_dir, "volcano_motif.pdf"))
+  print(volcanom)
+  dev.off()
+})
 
 # Coverage files
 file_names <- getGroupBW(
