@@ -39,6 +39,31 @@ get_cfg_path <- function(args) {
   if (length(i) == 1 && (i + 1) <= length(args)) args[i + 1] else NULL
 }
 
+load_comparison_project <- function(path) {
+  project_file <- file.path(path, "Save-ArchR-Project.rds")
+  project <- readRDS(project_file)
+  if (length(project@projectMetadata$GroupCoverages) == 0) {
+    return(loadArchRProject(path))
+  }
+
+  # These cached pseudobulk paths can reference a previous machine. This
+  # comparison uses Arrow matrices and getGroupBW builds new tracks from Arrows.
+  # Keep ArchR's normal validation of Arrows, peak annotations, etc.
+  message("Ignoring cached GroupCoverages for this comparison; coverage tracks will be rebuilt from Arrow files.")
+  project@projectMetadata$GroupCoverages <- NULL
+  backup <- tempfile("archr-project-", tmpdir = path, fileext = ".rds")
+  if (!file.copy(project_file, backup)) {
+    stop("Could not back up saved ArchR project before loading.")
+  }
+  on.exit({
+    if (!file.rename(backup, project_file)) {
+      warning("Could not restore saved ArchR project; original is at: ", backup)
+    }
+  }, add = TRUE)
+  saveRDS(project, project_file)
+  loadArchRProject(path)
+}
+
 subset_by <- function(
   ArchRProj,
   condition = NULL,
@@ -170,7 +195,7 @@ for (dir in c(gene_dir, peak_dir, motif_dir, coverage_dir)) {
   if (!dir.exists(dir)) dir.create(dir)
 }
 
-proj_filter <- loadArchRProject(archr_path)
+proj_filter <- load_comparison_project(archr_path)
 
 if (mode == "groupings") {
   condition_values <- proj_filter@cellColData$Condition@values
