@@ -130,16 +130,38 @@ multiple_conditions <- function(archrConditions, string) {
   #' for conditions such as 'ConditionA_ConditionB', where string is
   #' 'ConditionB'.
 
-  match_cond <- c()
-  string_lowercase <- tolower(string)
-  pattern <- paste0("\\b", string_lowercase, "\\b")
-  for (sample in archrConditions) {
-    lowercase <- tolower(sample)
-    result <- grepl(pattern, lowercase)
-    if (result) {
-      match_cond <- append(match_cond, sample)
-    }
+  #' Matching is case-insensitive and on whole words, where any run of
+  #' non-alphanumeric characters (including '_') separates words. Stops if
+  #' nothing matches: an empty result would silently drop the condition filter.
+
+  normalize <- function(x) {
+    paste0(" ", trimws(gsub("[^[:alnum:]]+", " ", tolower(x))), " ")
   }
+
+  if (is.null(string) || trimws(string) == "") {
+    return("")  # empty field: no condition filter, as without multipleA/B
+  }
+
+  archrConditions <- unique(as.character(archrConditions))
+  needle <- normalize(string)
+  match_cond <- archrConditions[
+    vapply(
+      archrConditions,
+      function(cond) grepl(needle, normalize(cond), fixed = TRUE),
+      logical(1)
+    )
+  ]
+
+  if (length(match_cond) == 0) {
+    stop(
+      sprintf(
+        "No condition contains '%s' as a whole word. Available conditions: %s",
+        string, paste(archrConditions, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
+
   final <- paste(match_cond, collapse = ",")
   return(final)
 }
@@ -393,11 +415,17 @@ marker_test <- run_optional_analysis("Peak comparison", {
 
   marker_list <- getMarkers(marker_test, cutOff = "FDR <= 1 & Log2FC >= -Inf")
 
-  # Add annotations
-  peak_data <- data.frame(
-    project_select@peakSet@ranges, project_select@peakSet@elementMetadata
-  )
-  total <- merge(peak_data, marker_list, by = c("start", "end"))
+  # Add annotations. Join on chromosome as well as coordinates: peaks on
+  # different chromosomes can share start/end, and a start/end-only join
+  # cross-attaches their annotations.
+  peak_data <- as.data.frame(project_select@peakSet, row.names = NULL)
+  peak_data$seqnames <- as.character(peak_data$seqnames)
+  peak_data$strand <- NULL
+  peak_names <- names(project_select@peakSet)
+  if (!is.null(peak_names)) peak_data$names <- peak_names
+  marker_df <- as.data.frame(marker_list)
+  marker_df$seqnames <- as.character(marker_df$seqnames)
+  total <- merge(peak_data, marker_df, by = c("seqnames", "start", "end"))
 
   write.csv(
     total, file = file.path(peak_dir, "all_peaks.csv"), row.names = FALSE
@@ -517,7 +545,7 @@ run_optional_analysis("Motif comparison", {
   pairwise_dfm$Significance <- ifelse(
     pairwise_dfm$mpvalue < 0.05 & abs(pairwise_dfm$mmean) >= 0.4,
     ifelse(
-      pairwise_dfm$mpvalue > 0,
+      pairwise_dfm$mmean > 0,
       colnames(assay(markers_motifs))[1],
       colnames(assay(markers_motifs))[2]
     ),
